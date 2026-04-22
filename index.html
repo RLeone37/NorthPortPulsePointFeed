@@ -10,20 +10,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root {
-    --bg:      #03070d;
-    --surface: #060c14;
-    --border:  #0d2035;
-    --border2: #1a3a5c;
+    --bg:      #07111e;
+    --surface: #0c1a2a;
+    --border:  #1a3550;
+    --border2: #2a5070;
     --accent:  #00d4ff;
-    --accent2: #0088cc;
-    --red:     #ff2020;
+    --accent2: #00aadd;
+    --red:     #ff3a3a;
     --red2:    #cc1010;
-    --amber:   #ffaa00;
+    --amber:   #ffbb00;
     --green:   #00ff88;
-    --text:    #a8cce8;
-    --text2:   #d0e8ff;
-    --muted:   #2a4a66;
-    --dim:     #142030;
+    --text:    #c8e0f4;
+    --text2:   #e8f4ff;
+    --muted:   #5a7a96;
+    --dim:     #2a4a66;
   }
 
 - { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,8 +43,8 @@ body::before {
 content: ‘’;
 position: fixed; inset: 0;
 background-image:
-linear-gradient(rgba(0,180,255,0.025) 1px, transparent 1px),
-linear-gradient(90deg, rgba(0,180,255,0.025) 1px, transparent 1px);
+linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
+linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
 background-size: 40px 40px;
 pointer-events: none; z-index: 0;
 }
@@ -53,21 +53,21 @@ pointer-events: none; z-index: 0;
 body::after {
 content: ‘’;
 position: fixed; inset: 0;
-background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
 pointer-events: none; z-index: 9998;
 }
 
 /* Vignette */
 .vignette {
 position: fixed; inset: 0;
-background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%);
+background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
 pointer-events: none; z-index: 9997;
 }
 
 /* ===== HEADER ===== */
 header {
 position: sticky; top: 0; z-index: 1000;
-background: linear-gradient(180deg, #020608 0%, #040c14 100%);
+background: linear-gradient(180deg, #0a1828 0%, #0c1e30 100%);
 border-bottom: 1px solid var(–border2);
 padding: 10px 14px;
 box-shadow: 0 2px 30px rgba(0,180,255,0.07);
@@ -203,10 +203,10 @@ letter-spacing: 1px; color: var(–muted);
 
 #map { height: 260px; width: 100%; background: #020810; z-index: 1; }
 
-.leaflet-tile-pane { filter: brightness(0.35) saturate(0.3) hue-rotate(200deg) contrast(1.1); }
+.leaflet-tile-pane { filter: brightness(0.5) saturate(0.4) hue-rotate(200deg) contrast(1.05); }
 .leaflet-control-zoom { border: 1px solid var(–border2) !important; border-radius: 0 !important; }
 .leaflet-control-zoom a { background: #04101e !important; color: var(–accent) !important; border-color: var(–border2) !important; border-radius: 0 !important; }
-.leaflet-popup-content-wrapper { background: rgba(4,12,24,0.97) !important; border: 1px solid var(–border2) !important; border-radius: 0 !important; color: var(–text) !important; box-shadow: 0 4px 30px rgba(0,0,0,0.8), 0 0 20px rgba(0,180,255,0.08) !important; }
+.leaflet-popup-content-wrapper { background: rgba(10,25,45,0.98) !important; border: 1px solid var(–border2) !important; border-radius: 0 !important; color: var(–text) !important; box-shadow: 0 4px 30px rgba(0,0,0,0.6), 0 0 20px rgba(0,180,255,0.08) !important; }
 .leaflet-popup-tip { background: #040c18 !important; }
 .leaflet-popup-content { font-family: ‘Barlow Condensed’, sans-serif !important; font-size: 12px !important; margin: 10px 14px !important; line-height: 1.5 !important; }
 .popup-type { font-family:‘Orbitron’,sans-serif; font-size:11px; font-weight:700; color:var(–text2); margin-bottom:4px; letter-spacing:1px; }
@@ -271,8 +271,8 @@ animation: fadein 0.3s ease; cursor: pointer; position: relative;
 @keyframes fadein { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:none; } }
 
 .inc-card:active { background: rgba(0,212,255,0.03); }
-.inc-card.is-today { border-left-color: var(–red); background: rgba(255,32,32,0.02); }
-.inc-card.is-older { opacity: 0.5; }
+.inc-card.is-today { border-left-color: var(–red); background: rgba(255,58,58,0.04); }
+.inc-card.is-older { opacity: 0.7; }
 .inc-card.highlighted { background: rgba(0,212,255,0.05) !important; border-left-color: var(–accent) !important; opacity: 1 !important; }
 
 .inc-icon {
