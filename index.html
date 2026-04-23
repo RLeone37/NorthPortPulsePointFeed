@@ -760,37 +760,64 @@
            lng >= SC_BOUNDS.minLng && lng <= SC_BOUNDS.maxLng;
   }
 
-  function cityFromZone(zone) {
-    if (!zone) return "";
-    var z = zone.toUpperCase();
-    if (z.indexOf("VENICE") !== -1)     return "Venice";
-    if (z.indexOf("ENGLEWOOD") !== -1)  return "Englewood";
-    if (z.indexOf("NOKOMIS") !== -1)    return "Nokomis";
+  function cityFromZone(zone, agencies) {
+    // Build a combined string from zone and all agency names to search
+    var combined = (zone || "") + " " + (agencies ? agencies.join(" ") : "");
+    var z = combined.toUpperCase();
     if (z.indexOf("NORTH PORT") !== -1 || z.indexOf("NPFD") !== -1) return "North Port";
-    if (z.indexOf("LONGBOAT") !== -1)   return "Longboat Key";
-    if (z.indexOf("OSPREY") !== -1)     return "Osprey";
+    if (z.indexOf("VENICE") !== -1 || z.indexOf("VFD") !== -1)      return "Venice";
+    if (z.indexOf("ENGLEWOOD") !== -1 || z.indexOf("EFD") !== -1)   return "Englewood";
+    if (z.indexOf("NOKOMIS") !== -1 || z.indexOf("NVFD") !== -1)    return "Nokomis";
+    if (z.indexOf("LONGBOAT") !== -1 || z.indexOf("LBFD") !== -1)   return "Longboat Key";
+    if (z.indexOf("OSPREY") !== -1)                                  return "Osprey";
     return "Sarasota";
+  }
+
+  // I-75 mile marker coordinates for Sarasota/Charlotte/Manatee
+  // Centerline coordinates per mile marker along I-75
+  var I75_MM = {
+    191:{lat:26.9210,lng:-82.1100}, 192:{lat:26.9324,lng:-82.1089},
+    193:{lat:26.9437,lng:-82.1078}, 194:{lat:26.9551,lng:-82.1067},
+    195:{lat:26.9664,lng:-82.1056}, 196:{lat:26.9778,lng:-82.1045},
+    197:{lat:26.9891,lng:-82.1034}, 198:{lat:27.0005,lng:-82.1023},
+    199:{lat:27.0118,lng:-82.1012}, 200:{lat:27.0232,lng:-82.1001},
+    201:{lat:27.0345,lng:-82.0990}, 202:{lat:27.0459,lng:-82.0979},
+    203:{lat:27.0572,lng:-82.0968}, 204:{lat:27.0686,lng:-82.0957},
+    205:{lat:27.0799,lng:-82.0946}, 206:{lat:27.0913,lng:-82.0935},
+    207:{lat:27.1026,lng:-82.0924}, 208:{lat:27.1140,lng:-82.0913},
+    209:{lat:27.1253,lng:-82.0902}, 210:{lat:27.1367,lng:-82.0891},
+    211:{lat:27.1480,lng:-82.0880}, 212:{lat:27.1594,lng:-82.0869},
+    213:{lat:27.1707,lng:-82.0858}
+  };
+
+  function checkI75MM(address) {
+    var a = address.toUpperCase();
+    // "210000 N I75" or "210000 I-75" — 6-digit fake house number = MM * 1000
+    var m = a.match(/^(\d{3})000\s*[NS]?\s*I[-\s]?75/);
+    if (m) { var mm = parseInt(m[1]); if (I75_MM[mm]) return I75_MM[mm]; }
+    // "N I75 / BEE RIDGE RD" or just contains I-75 with no cross street number
+    // Use midpoint of county as fallback for I-75 with no MM
+    if (/\bI[-\s]?75\b/.test(a) && !/^\d+\s/.test(a)) {
+      return {lat: 27.05, lng: -82.10};
+    }
+    return null;
   }
 
   async function geocode(address, cityHint) {
     var cacheKey = address + "|" + (cityHint || "");
     if (geocodeCache[cacheKey] !== undefined) return geocodeCache[cacheKey];
+
+    // Check I-75 mile marker first — instant, no API call needed
+    var mmResult = checkI75MM(address);
+    if (mmResult) { geocodeCache[cacheKey] = mmResult; return mmResult; }
+
     var city = cityHint || "Sarasota";
-
     try {
-      // Format address for Google
       var q = address.trim();
-
-      // Handle I-75 mile marker format e.g. "210000 N I75" -> "I-75 mile marker 210 Florida"
-      var mmMatch = q.match(/^(\d{3})000\s*(?:N|S)?\s*I[-\s]?75/i);
-      if (mmMatch) {
-        q = "Interstate 75 mile marker " + mmMatch[1] + ", Florida";
-      } else {
-        // Handle intersections: replace / with &
-        q = q.replace(/\s*\/\s*/g, " & ");
-        // Append city and state
-        q = q + ", " + city + ", FL";
-      }
+      // Handle intersections: replace / with &
+      q = q.replace(/\s*\/\s*/g, " & ");
+      // Append city and state
+      q = q + ", " + city + ", FL";
 
       var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" +
                 encodeURIComponent(q) +
@@ -821,7 +848,7 @@
     // Geocode all addresses in parallel using zone as city hint for accuracy
     await Promise.all(mappable.map(async function(inc) {
       if (!inc._lat) {
-        var city = cityFromZone(inc.zone || inc.agency || "");
+        var city = cityFromZone(inc.zone || "", inc.agencies || []);
         var c = await geocode(inc.location, city);
         if (c) { inc._lat = c.lat; inc._lng = c.lng; }
       }
@@ -947,7 +974,7 @@
 
     // Coordinates not yet loaded — geocode on demand then pan
     if (inc.mappable && !inc._lat) {
-      var city = cityFromZone(inc.zone || inc.agency || "");
+      var city = cityFromZone(inc.zone || "", inc.agencies || []);
       geocode(inc.location, city).then(function(c) {
         if (!c) return;
         inc._lat = c.lat;
