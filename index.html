@@ -622,7 +622,7 @@
     var parser = new DOMParser();
     var doc = parser.parseFromString(html, "text/html");
     var rows = doc.querySelectorAll("tr");
-    var incidents = [];
+    var raw = [];
     var currentDate = "";
     var todayStr = getTodayStr();
 
@@ -637,33 +637,59 @@
       var cells = row.querySelectorAll("td");
       if (cells.length < 7) return;
 
-      var time     = cells[0].textContent.trim() || cells[1].textContent.trim();
-      var event    = cells[2].textContent.trim();
-      var location = cells[3].textContent.trim();
-      var grid     = cells[4].textContent.trim();
-      var zone     = cells[5].textContent.trim();
-      var caseNum  = cells[6].textContent.trim();
+      var time    = cells[0].textContent.trim() || cells[1].textContent.trim();
+      var event   = cells[2].textContent.trim();
+      var location= cells[3].textContent.trim();
+      var grid    = cells[4].textContent.trim();
+      var zone    = cells[5].textContent.trim();
+      var caseNum = cells[6].textContent.trim();
 
       if (!event || !caseNum) return;
 
-      var agency = getAgency(caseNum);
-
-      incidents.push({
-        date:      currentDate,
-        time:      time,
-        eventType: event,
-        location:  location,
-        grid:      grid,
-        zone:      zone,
-        caseNum:   caseNum,
-        agency:    agency,
-        isToday:   currentDate === todayStr,
-        mappable:  hasAddress(location),
-        _id:       "inc" + (++idCounter)
+      raw.push({
+        date: currentDate, time: time, eventType: event,
+        location: location, grid: grid, zone: zone,
+        caseNum: caseNum, agency: getAgency(caseNum),
+        isToday: currentDate === todayStr,
+        mappable: hasAddress(location)
       });
     });
 
-    return incidents;
+    // Deduplicate: same eventType + location + time + date = one incident
+    // Collect all agencies into an array on the first match
+    var merged = [];
+    var seen = {};
+
+    raw.forEach(function(row) {
+      var key = row.date + "|" + row.time + "|" + row.eventType.toUpperCase() + "|" + row.location.toUpperCase();
+      if (seen[key] !== undefined) {
+        // Add agency to existing incident if not already present
+        var existing = merged[seen[key]];
+        if (existing.agencies.indexOf(row.agency) === -1) {
+          existing.agencies.push(row.agency);
+          existing.caseNums.push(row.caseNum);
+        }
+      } else {
+        seen[key] = merged.length;
+        merged.push({
+          date:      row.date,
+          time:      row.time,
+          eventType: row.eventType,
+          location:  row.location,
+          grid:      row.grid,
+          zone:      row.zone,
+          caseNum:   row.caseNum,
+          caseNums:  [row.caseNum],
+          agency:    row.agency,
+          agencies:  [row.agency],
+          isToday:   row.isToday,
+          mappable:  row.mappable,
+          _id:       "inc" + (++idCounter)
+        });
+      }
+    });
+
+    return merged;
   }
 
   async function geocode(address) {
@@ -733,12 +759,16 @@
 
   function getFiltered() {
     var out = allIncidents;
-    // Agency filter
+    // Agency filter — check if any of the incident's agencies match
     if (currentAgency !== "all") {
       if (currentAgency === "other") {
-        out = out.filter(function(i) { return i.agency === "other" || i.agency === "lbfd"; });
+        out = out.filter(function(i) {
+          return i.agencies.some(function(a) { return a === "other" || a === "lbfd"; });
+        });
       } else {
-        out = out.filter(function(i) { return i.agency === currentAgency; });
+        out = out.filter(function(i) {
+          return i.agencies.indexOf(currentAgency) !== -1;
+        });
       }
     }
     // Type filter
@@ -764,12 +794,18 @@
       var addrHtml = inc.mappable
         ? "<div class=\"inc-addr\">&#x25B8; " + inc.location + "</div>"
         : "<div class=\"inc-addr no-addr\">Address not disclosed</div>";
+
+      // Build all agency tags
+      var agencyTags = (inc.agencies || [ag]).map(function(a) {
+        return "<span class=\"agency-tag " + a + "\">" + getAgencyLabel(a) + "</span>";
+      }).join("");
+
       return "<div class=\"inc-card " + (inc.isToday ? "is-today" : "is-older") + " agency-" + ag + "\" id=\"card-" + inc._id + "\" onclick=\"focusOnMap('" + inc._id + "')\">" +
         "<div class=\"inc-icon " + CAT_CLS[cat] + "\">" + CAT_EMOJI[cat] + "</div>" +
         "<div class=\"inc-body\">" +
           "<div class=\"inc-type\">" + inc.eventType + "</div>" +
           addrHtml +
-          "<div class=\"inc-case\"><span class=\"agency-tag " + ag + "\">" + getAgencyLabel(ag) + "</span>" + inc.caseNum + "</div>" +
+          "<div class=\"inc-case\">" + agencyTags + "</div>" +
         "</div>" +
         "<div class=\"inc-meta\">" +
           "<div class=\"inc-time\">" + inc.time + "</div>" +
