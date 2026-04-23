@@ -754,10 +754,25 @@
            lng >= SC_BOUNDS.minLng && lng <= SC_BOUNDS.maxLng;
   }
 
-  async function geocode(address) {
-    if (geocodeCache[address] !== undefined) return geocodeCache[address];
+  // Extract city hint from zone string e.g. "VENICE FIRE STA 52" -> "Venice"
+  function cityFromZone(zone) {
+    if (!zone) return "";
+    var z = zone.toUpperCase();
+    if (z.indexOf("VENICE") !== -1)     return "Venice";
+    if (z.indexOf("ENGLEWOOD") !== -1)  return "Englewood";
+    if (z.indexOf("NOKOMIS") !== -1)    return "Nokomis";
+    if (z.indexOf("NORTH PORT") !== -1 || z.indexOf("NPFD") !== -1) return "North Port";
+    if (z.indexOf("LONGBOAT") !== -1)   return "Longboat Key";
+    if (z.indexOf("OSPREY") !== -1)     return "Osprey";
+    return "Sarasota";
+  }
+
+  async function geocode(address, cityHint) {
+    var cacheKey = address + "|" + (cityHint || "");
+    if (geocodeCache[cacheKey] !== undefined) return geocodeCache[cacheKey];
+    var city = cityHint || "Sarasota";
     try {
-      var q = address.trim().replace(/\s*\/\s*/g, " and ") + " Sarasota Florida";
+      var q = address.trim().replace(/\s*\/\s*/g, " and ") + " " + city + " Florida";
       var url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) +
                 "&limit=5&lang=en&bbox=-82.90,26.50,-81.60,27.90";
       var r = await fetch(url);
@@ -769,12 +784,12 @@
         var lng = c[0], lat = c[1];
         if (inRegion(lat, lng)) {
           var result = {lat: lat, lng: lng};
-          geocodeCache[address] = result;
+          geocodeCache[cacheKey] = result;
           return result;
         }
       }
     } catch(e) {}
-    geocodeCache[address] = null;
+    geocodeCache[cacheKey] = null;
     return null;
   }
 
@@ -785,10 +800,11 @@
     var mappable = incidents.filter(function(i) { return i.mappable; });
     if (!mappable.length) return;
 
-    // Geocode all addresses in parallel
+    // Geocode all addresses in parallel using zone as city hint for accuracy
     await Promise.all(mappable.map(async function(inc) {
       if (!inc._lat) {
-        var c = await geocode(inc.location);
+        var city = cityFromZone(inc.zone || inc.agency || "");
+        var c = await geocode(inc.location, city);
         if (c) { inc._lat = c.lat; inc._lng = c.lng; }
       }
     }));
@@ -913,7 +929,8 @@
 
     // Coordinates not yet loaded — geocode on demand then pan
     if (inc.mappable && !inc._lat) {
-      geocode(inc.location).then(function(c) {
+      var city = cityFromZone(inc.zone || inc.agency || "");
+      geocode(inc.location, city).then(function(c) {
         if (!c) return;
         inc._lat = c.lat;
         inc._lng = c.lng;
