@@ -594,11 +594,17 @@
     return "other";
   }
 
-  function hasAddress(location) {
+  function hasAddress(location, eventType) {
     if (!location || location.trim().length < 4) return false;
     var l = location.trim().toUpperCase();
     if (/^(GRID|REDACTED|UNKNOWN|N\/A|NONE)$/.test(l)) return false;
-    return /\d/.test(l);
+    // Medical calls never mapped — address withheld for privacy
+    if (eventType && category(eventType) === "medical") return false;
+    // Must have a street number OR be an intersection (contains /)
+    // A bare street name like "PRICE BLVD" has no number and no slash
+    var hasNumber = /\d/.test(l);
+    var isIntersection = l.indexOf("/") !== -1;
+    return hasNumber || isIntersection;
   }
 
   var CAT_EMOJI = {fire:"&#x1F525;", medical:"&#x1FA7A;", traffic:"&#x1F697;", alarm:"&#x26A0;", other:"&#x26A1;"};
@@ -651,7 +657,7 @@
         location: location, grid: grid, zone: zone,
         caseNum: caseNum, agency: getAgency(caseNum),
         isToday: currentDate === todayStr,
-        mappable: hasAddress(location)
+        mappable: hasAddress(location, event)
       });
     });
 
@@ -828,7 +834,10 @@
   function renderList(incidents) {
     var el = document.getElementById("incident-list");
     if (!incidents.length) {
-      el.innerHTML = "<div class=\"state-screen\"><span style=\"font-size:28px\">&#x1F4E1;</span><span>NO INCIDENTS IN FEED</span></div>";
+      var msg = currentAgency !== "all"
+        ? "NO " + currentAgency.toUpperCase() + " INCIDENTS IN CURRENT FEED"
+        : "NO INCIDENTS IN FEED";
+      el.innerHTML = "<div class=\"state-screen\"><span style=\"font-size:28px\">&#x1F4E1;</span><span>" + msg + "</span></div>";
       renderMap([]);
       return;
     }
