@@ -66,6 +66,7 @@
     box-shadow: 0 2px 30px rgba(0,180,255,0.07);
     flex-shrink: 0;
     position: relative;
+    z-index: 10;
   }
 
   header::before {
@@ -255,32 +256,32 @@
   }
 
   /* ===== SIDE BY SIDE LAYOUT ===== */
+  /* Body is a vertical flex container so top bars take natural height
+     and main-layout gets all remaining space */
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
   .main-layout {
     display: flex;
     flex-direction: row;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    flex: 1;
+    min-height: 0;
+    position: relative;
     z-index: 1;
     overflow: hidden;
   }
 
-  /* Left: map column — full height minus the top bars */
+  /* Left: map column */
   .map-col {
     width: 42%;
     flex-shrink: 0;
     border-right: 1px solid var(--border2);
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 0;
     overflow: hidden;
-  }
-
-  /* The top bars (header, stats, agency) sit above the main-layout via padding trick */
-  body {
-    padding-top: 0;
   }
 
   .map-col .map-section {
@@ -297,45 +298,38 @@
     min-height: 0;
   }
 
-  /* Right: incident list column — scrolls independently */
+  /* Right: incident list column */
   .list-col {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  /* The incident list itself scrolls, filter bar stays fixed at top of column */
-  .filter-bar {
-    flex-shrink: 0;
-  }
-
-  #status-bar {
-    flex-shrink: 0;
-  }
+  .filter-bar { flex-shrink: 0; }
+  #status-bar { flex-shrink: 0; }
+  .list-footer { flex-shrink: 0; }
 
   #incident-list {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    min-height: 0;
   }
 
-  .list-footer {
-    flex-shrink: 0;
-  }
-
-  /* Mobile: stack vertically, restore normal scroll */
+  /* Mobile */
   @media (max-width: 768px) {
     html, body { overflow: auto; }
 
+    body { display: block; }
+
     .main-layout {
-      position: relative;
       flex-direction: column;
       height: auto;
       overflow: visible;
-      top: auto; left: auto; right: auto; bottom: auto;
     }
 
     .map-col {
@@ -346,18 +340,11 @@
       overflow: visible;
     }
 
-    .map-col #map {
-      height: 260px !important;
-    }
+    .map-col #map { height: 260px !important; }
 
-    .list-col {
-      overflow: visible;
-      height: auto;
-    }
+    .list-col { overflow: visible; height: auto; }
 
-    #incident-list {
-      overflow: visible;
-    }
+    #incident-list { overflow: visible; flex: none; }
   }
     font-family: 'Share Tech Mono', monospace; font-size: 11px;
     letter-spacing: 2px; padding: 7px 18px; text-align: center;
@@ -496,44 +483,46 @@
 <body>
 <div class="vignette"></div>
 
+<!-- TOP BARS: full width -->
+<header>
+  <div class="header-row1">
+    <div class="brand">
+      <div class="brand-shield">&#x1F6A8;</div>
+      <div>
+        <div class="brand-text">SARASOTA CO. CAD</div>
+        <div class="brand-sub">911 DISPATCH // LIVE FEED</div>
+      </div>
+    </div>
+  </div>
+  <div class="header-row2">
+    <div class="live-pill"><div class="live-dot"></div>ONLINE</div>
+    <div id="clock">--:--:--</div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadIncidents()">&#x21BB;</button>
+  </div>
+</header>
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-num red"   id="s-today">--</div><div class="stat-label">Today</div></div>
+  <div class="stat"><div class="stat-num amber"  id="s-fire">--</div><div class="stat-label">Fire</div></div>
+  <div class="stat"><div class="stat-num"        id="s-traffic">--</div><div class="stat-label">Traffic</div></div>
+  <div class="stat"><div class="stat-num green"  id="s-total">--</div><div class="stat-label">Total</div></div>
+</div>
+
+<div class="agency-bar" id="agency-bar">
+  <button class="agency-btn active" onclick="setAgency('all',this)">All</button>
+  <button class="agency-btn npfd"  onclick="setAgency('npfd',this)">N. Port</button>
+  <button class="agency-btn scfd"  onclick="setAgency('scfd',this)">SCFD</button>
+  <button class="agency-btn vfd"   onclick="setAgency('vfd',this)">Venice</button>
+  <button class="agency-btn efd"   onclick="setAgency('efd',this)">Englewood</button>
+  <button class="agency-btn nvfd"  onclick="setAgency('nvfd',this)">Nokomis</button>
+  <button class="agency-btn other" onclick="setAgency('other',this)">Other</button>
+</div>
+
+<!-- SIDE BY SIDE: map left, list right -->
 <div class="main-layout">
 
-  <!-- LEFT: Map column (header + stats + agency bar + map) -->
+  <!-- LEFT: Map column -->
   <div class="map-col">
-    <header>
-      <div class="header-row1">
-        <div class="brand">
-          <div class="brand-shield">&#x1F6A8;</div>
-          <div>
-            <div class="brand-text">SARASOTA CO. CAD</div>
-            <div class="brand-sub">911 DISPATCH // LIVE FEED</div>
-          </div>
-        </div>
-      </div>
-      <div class="header-row2">
-        <div class="live-pill"><div class="live-dot"></div>ONLINE</div>
-        <div id="clock">--:--:--</div>
-        <button class="refresh-btn" id="refresh-btn" onclick="loadIncidents()">&#x21BB;</button>
-      </div>
-    </header>
-
-    <div class="stats-grid">
-      <div class="stat"><div class="stat-num red"   id="s-today">--</div><div class="stat-label">Today</div></div>
-      <div class="stat"><div class="stat-num amber"  id="s-fire">--</div><div class="stat-label">Fire</div></div>
-      <div class="stat"><div class="stat-num"        id="s-traffic">--</div><div class="stat-label">Traffic</div></div>
-      <div class="stat"><div class="stat-num green"  id="s-total">--</div><div class="stat-label">Total</div></div>
-    </div>
-
-    <div class="agency-bar" id="agency-bar">
-      <button class="agency-btn active" onclick="setAgency('all',this)">All</button>
-      <button class="agency-btn npfd"  onclick="setAgency('npfd',this)">N. Port</button>
-      <button class="agency-btn scfd"  onclick="setAgency('scfd',this)">SCFD</button>
-      <button class="agency-btn vfd"   onclick="setAgency('vfd',this)">Venice</button>
-      <button class="agency-btn efd"   onclick="setAgency('efd',this)">Englewood</button>
-      <button class="agency-btn nvfd"  onclick="setAgency('nvfd',this)">Nokomis</button>
-      <button class="agency-btn other" onclick="setAgency('other',this)">Other</button>
-    </div>
-
     <div class="map-section">
       <div class="map-header">
         <div class="map-title">Sarasota County, FL</div>
@@ -548,7 +537,6 @@
 
   <!-- RIGHT: Incident list column -->
   <div class="list-col">
-    <!-- Type filters -->
     <div class="filter-bar">
       <button class="tab active" onclick="setFilter('all',this)">All</button>
       <button class="tab" onclick="setFilter('today',this)">Today</button>
@@ -799,19 +787,21 @@
     var mappable = incidents.filter(function(i) { return i.mappable; });
     if (!mappable.length) return;
 
-    var bounds = [];
-    for (var i = 0; i < mappable.length; i++) {
-      var inc = mappable[i];
+    // Geocode all addresses in parallel
+    await Promise.all(mappable.map(async function(inc) {
       if (!inc._lat) {
         var c = await geocode(inc.location);
-        if (!c) continue;
-        inc._lat = c.lat;
-        inc._lng = c.lng;
+        if (c) { inc._lat = c.lat; inc._lng = c.lng; }
       }
+    }));
+
+    var bounds = [];
+    mappable.forEach(function(inc) {
+      if (!inc._lat) return; // skip if geocode failed
+
       var cat = category(inc.eventType);
       var suffix = inc.isToday ? "_today" : "_older";
-      var iconKey = cat + suffix;
-      var icon = ICONS[iconKey] || ICONS["other_today"];
+      var icon = ICONS[cat + suffix] || ICONS["other_today"];
 
       var marker = L.marker([inc._lat, inc._lng], {icon: icon})
         .bindPopup(
@@ -832,7 +822,7 @@
 
       mapMarkers.push(marker);
       bounds.push([inc._lat, inc._lng]);
-    }
+    });
 
     if (bounds.length) {
       try { map.fitBounds(bounds, {padding:[28,28], maxZoom:14}); }
