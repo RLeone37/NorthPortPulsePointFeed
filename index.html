@@ -813,10 +813,8 @@
     // Match: 183000 S I75, 210000 N I75, 195000 I-75, 200000 I75 etc.
     var m = a.match(/^(\d{3})000\s*[NS]?\s*I[-\s]?75\b/);
     if (m) {
-      var mm = parseInt(m[1]);
-      if (I75_MM[mm]) return I75_MM[mm];
-      // If MM not in table, interpolate on I-75 centerline
-      return {lat: 26.92 + (mm - 183) * 0.013, lng: -82.10};
+      // Return the mile marker number so geocode() can use it
+      return {mmOnly: true, mm: parseInt(m[1])};
     }
     return null;
   }
@@ -825,16 +823,40 @@
     var cacheKey = address + "|" + (cityHint || "");
     if (geocodeCache[cacheKey] !== undefined) return geocodeCache[cacheKey];
 
-    // Check I-75 mile marker first — instant, no API call needed
-    var mmResult = checkI75MM(address);
-    if (mmResult) { geocodeCache[cacheKey] = mmResult; return mmResult; }
+    // Check I-75 mile marker first
+    var mmCheck = checkI75MM(address);
+    if (mmCheck && mmCheck.mmOnly) {
+      // Send to Google as a milepost query — most accurate method
+      var mmQuery = "I-75 milepost " + mmCheck.mm + " Sarasota County FL";
+      try {
+        var mmUrl = "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+                    encodeURIComponent(mmQuery) +
+                    "&bounds=26.50,-82.90|27.90,-81.60" +
+                    "&key=" + GOOGLE_KEY;
+        var mmr = await fetch(mmUrl);
+        var mmd = await mmr.json();
+        if (mmd.status === "OK" && mmd.results && mmd.results.length > 0) {
+          var mmloc = mmd.results[0].geometry.location;
+          if (inRegion(mmloc.lat, mmloc.lng)) {
+            var mmresult = {lat: mmloc.lat, lng: mmloc.lng};
+            geocodeCache[cacheKey] = mmresult;
+            return mmresult;
+          }
+        }
+      } catch(e) {}
+      // Fallback to table if Google doesn't find it
+      if (I75_MM[mmCheck.mm]) {
+        geocodeCache[cacheKey] = I75_MM[mmCheck.mm];
+        return I75_MM[mmCheck.mm];
+      }
+      geocodeCache[cacheKey] = null;
+      return null;
+    }
 
     var city = cityHint || "Sarasota";
     try {
       var q = address.trim();
-      // Handle intersections: replace / with &
       q = q.replace(/\s*\/\s*/g, " & ");
-      // Append city and state
       q = q + ", " + city + ", FL";
 
       var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" +
