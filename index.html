@@ -372,7 +372,7 @@
   .inc-icon::after  { bottom:-1px; right:-1px; border-width:0 1px 1px 0; }
 
   .icon-fire    { background:rgba(255,100,0,0.08);  border-color:rgba(255,100,0,0.4); }
-  .icon-medical { background:rgba(255,58,58,0.08);  border-color:rgba(255,58,58,0.35); }
+  .icon-marine  { background:rgba(0,160,255,0.1);  border-color:rgba(0,160,255,0.35); }
   .icon-traffic { background:rgba(0,180,255,0.06);  border-color:rgba(0,180,255,0.3); }
   .icon-alarm   { background:rgba(255,187,0,0.06);  border-color:rgba(255,187,0,0.3); }
   .icon-other   { background:rgba(60,100,140,0.06); border-color:rgba(60,100,140,0.3); }
@@ -508,7 +508,7 @@
       <button class="tab active" onclick="setFilter('all',this)">All</button>
       <button class="tab" onclick="setFilter('today',this)">Today</button>
       <button class="tab" onclick="setFilter('fire',this)">Fire</button>
-      <button class="tab" onclick="setFilter('medical',this)">Medical</button>
+      <button class="tab" onclick="setFilter('marine',this)">Marine</button>
       <button class="tab" onclick="setFilter('traffic',this)">Traffic</button>
       <button class="tab" onclick="setFilter('alarm',this)">Alarms</button>
     </div>
@@ -549,12 +549,12 @@
     fire_today:    makeIcon("rgba(255,80,0,0.9)",   "rgba(255,100,0,0.8)",  "&#x1F525;"),
     traffic_today: makeIcon("rgba(0,160,255,0.9)",  "rgba(0,200,255,0.8)",  "&#x1F697;"),
     alarm_today:   makeIcon("rgba(255,180,0,0.9)",  "rgba(255,200,0,0.8)",  "&#x26A0;"),
-    medical_today: makeIcon("rgba(255,60,60,0.9)",  "rgba(255,80,80,0.8)",  "&#x1FA7A;"),
+    marine_today:  makeIcon("rgba(0,140,220,0.9)",  "rgba(0,180,255,0.8)",  "&#x26F5;"),
     other_today:   makeIcon("rgba(60,120,180,0.9)", "rgba(80,150,220,0.8)", "&#x26A1;"),
     fire_older:    makeIcon("rgba(80,40,0,0.6)",    "rgba(120,60,0,0.4)",   "&#x1F525;"),
     traffic_older: makeIcon("rgba(0,60,100,0.6)",   "rgba(0,100,150,0.4)",  "&#x1F697;"),
     alarm_older:   makeIcon("rgba(80,60,0,0.6)",    "rgba(120,100,0,0.4)",  "&#x26A0;"),
-    medical_older: makeIcon("rgba(100,30,30,0.6)",  "rgba(150,50,50,0.4)",  "&#x1FA7A;"),
+    marine_older:  makeIcon("rgba(0,50,90,0.6)",    "rgba(0,80,140,0.4)",   "&#x26F5;"),
     other_older:   makeIcon("rgba(20,40,60,0.6)",   "rgba(40,70,100,0.4)",  "&#x26A1;"),
   };
 
@@ -590,25 +590,23 @@
     if (/TRAFFIC|CRASH|COLLISION|ACCIDENT|MVC/.test(t)) return "traffic";
     if (/ALARM|CARBON|MONOXIDE/.test(t)) return "alarm";
     if (/FIRE|BRUSH|EXPLOSION|STRUCTURE|SMOKE|HAZMAT|BURNING|OUTSIDE FIRE|ELECTRICAL/.test(t)) return "fire";
-    if (/MEDICAL|EMS|CARDIAC|CPR|TRAUMA|RESCUE MEDICAL|FALL|SICK|ALS|BLS|OVERDOSE|SEIZ|DIABET|ALLERGIC|UNCONSCIOUS|HEMORRHAGE|STROKE|CHEST PAIN|INJURY/.test(t)) return "medical";
+    if (/MARINE|WATER|BOAT|DROWNING|FLOOD|SWIFT WATER|SURF|DIVE|VESSEL/.test(t)) return "marine";
     return "other";
   }
 
-  function hasAddress(location, eventType) {
+  function hasAddress(location) {
     if (!location || location.trim().length < 4) return false;
     var l = location.trim().toUpperCase();
     if (/^(GRID|REDACTED|UNKNOWN|N\/A|NONE)$/.test(l)) return false;
-    // Medical calls never mapped — address withheld for privacy
-    if (eventType && category(eventType) === "medical") return false;
     // Must have a street number OR be an intersection (contains /)
-    // A bare street name like "PRICE BLVD" has no number and no slash
+    // A bare street name like "PRICE BLVD" with no number and no slash is not mappable
     var hasNumber = /\d/.test(l);
     var isIntersection = l.indexOf("/") !== -1;
     return hasNumber || isIntersection;
   }
 
-  var CAT_EMOJI = {fire:"&#x1F525;", medical:"&#x1FA7A;", traffic:"&#x1F697;", alarm:"&#x26A0;", other:"&#x26A1;"};
-  var CAT_CLS   = {fire:"icon-fire", medical:"icon-medical", traffic:"icon-traffic", alarm:"icon-alarm", other:"icon-other"};
+  var CAT_EMOJI = {fire:"&#x1F525;", marine:"&#x26F5;", traffic:"&#x1F697;", alarm:"&#x26A0;", other:"&#x26A1;"};
+  var CAT_CLS   = {fire:"icon-fire", marine:"icon-marine", traffic:"icon-traffic", alarm:"icon-alarm", other:"icon-other"};
 
   function getTodayStr() {
     var d = new Date();
@@ -657,7 +655,7 @@
         location: location, grid: grid, zone: zone,
         caseNum: caseNum, agency: getAgency(caseNum),
         isToday: currentDate === todayStr,
-        mappable: hasAddress(location, event)
+        mappable: hasAddress(location)
       });
     });
 
@@ -825,7 +823,7 @@
     // Type filter
     if (currentFilter === "today")   out = out.filter(function(i) { return i.isToday; });
     if (currentFilter === "fire")    out = out.filter(function(i) { return category(i.eventType) === "fire"; });
-    if (currentFilter === "medical") out = out.filter(function(i) { return category(i.eventType) === "medical"; });
+    if (currentFilter === "marine")  out = out.filter(function(i) { return category(i.eventType) === "marine"; });
     if (currentFilter === "traffic") out = out.filter(function(i) { return category(i.eventType) === "traffic"; });
     if (currentFilter === "alarm")   out = out.filter(function(i) { return category(i.eventType) === "alarm"; });
     return out;

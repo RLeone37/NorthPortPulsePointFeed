@@ -13,7 +13,9 @@ Fetches the public dispatch log from Sarasota County's 911 reporting site, parse
 
 ## Data Source
 
-Incident data is pulled from the Sarasota County 911 Dispatch Reporting site at `dispatchreporting.scgov.net`. This is the county's own CAD (Computer Aided Dispatch) system, making it the most direct and up-to-date public source available. Because browsers cannot fetch cross-origin pages directly, the Cloudflare Worker handles the request server-side and passes the data back to the dashboard.
+Incident data is pulled from the Sarasota County 911 Dispatch Reporting site at `dispatchreporting.scgov.net`. This is the county's own CAD (Computer Aided Dispatch) system and represents the most direct public source available — updated faster than third-party aggregators which receive a secondary feed from the same system.
+
+Note: The county dispatch site covers fire and rescue incidents only. EMS and medical calls are handled through a separate system and are not published on the public feed.
 
 ## Architecture
 
@@ -21,23 +23,32 @@ Incident data is pulled from the Sarasota County 911 Dispatch Reporting site at 
 index.html  →  Cloudflare Worker  →  dispatchreporting.scgov.net
 ```
 
-The index.html is a static file hosted on GitHub Pages. It calls the Cloudflare Worker, which fetches the county dispatch page and returns the HTML. The dashboard then parses the table, deduplicates incidents, geocodes addresses, and renders everything.
+The dashboard is a static HTML file hosted on GitHub Pages. It calls the Cloudflare Worker, which fetches the county dispatch page server-side and returns the HTML. The dashboard then parses the table, deduplicates incidents, geocodes addresses, and renders everything in the browser.
 
 ## Features
 
 - Live incident feed refreshing every 60 seconds
-- Multi-agency deduplication — when multiple departments respond to the same call, they appear as one incident card with all agency tags shown
+- Multi-agency deduplication — when multiple departments respond to the same call, a single incident card is shown with all responding agency tags displayed
 - Interactive Leaflet map with geocoded incident markers, bounded to Sarasota and surrounding counties (Charlotte, Manatee, DeSoto, Hardee)
 - Agency filters: All, North Port, SCFD, Venice, Englewood, Nokomis, Other
-- Incident type filters: All, Today, Fire, Medical, Traffic, Alarms
-- Medical calls shown in the list without map markers (addresses not disclosed for privacy)
-- Intersections handled in geocoding — cross-street addresses are formatted and searched correctly
+- Incident type filters: All, Today, Fire, Marine, Traffic, Alarms
+- Incidents that do not match a specific category appear in the All view
 - Side-by-side layout on wide screens (map left, incidents right), stacked automatically on mobile
-- Command center styling with color-coded agency tags and glowing stat numbers
+- Command center styling with Rajdhani and Inter fonts, color-coded agency tags, and glowing stat numbers
+
+## Incident Categories
+
+| Filter | Matched Keywords |
+|--------|-----------------|
+| Fire | FIRE, BRUSH, EXPLOSION, STRUCTURE, SMOKE, HAZMAT, BURNING, ELECTRICAL |
+| Marine | MARINE, WATER, BOAT, DROWNING, FLOOD, SWIFT WATER, SURF, DIVE, VESSEL |
+| Traffic | TRAFFIC, CRASH, COLLISION, ACCIDENT, MVC |
+| Alarms | ALARM, CARBON, MONOXIDE |
+| Other | Anything not matched above — always visible in the All view |
 
 ## Geocoding
 
-Addresses are geocoded using Nominatim (OpenStreetMap), with results bounded to the southwest Florida region. Incidents that cannot be reliably located are listed but not plotted on the map, preventing incorrect marker placement.
+Addresses are geocoded using Nominatim (OpenStreetMap) with results bounded to the southwest Florida region. Incidents with only a bare street name (no number, no intersection) are listed but not mapped. Incidents that cannot be reliably located are also listed only, preventing incorrect marker placement.
 
 ## Hosting on GitHub Pages
 
@@ -48,14 +59,16 @@ Addresses are geocoded using Nominatim (OpenStreetMap), with results bounded to 
 
 ## Cloudflare Worker Setup
 
-1. Go to `workers.cloudflare.com` and create a new Worker.
-2. Paste the contents of `worker.js` into the editor and deploy.
-3. Copy the generated Worker URL (e.g. `https://your-worker.your-name.workers.dev`).
-4. In `index.html`, set the `WORKER_URL` variable near the top of the script section to your Worker URL.
+1. Go to `dash.cloudflare.com` and navigate to Workers & Pages.
+2. Create a new Worker and name it `sarasota-cad-proxy`.
+3. Paste the contents of `worker.js` into the editor and deploy.
+4. Your Worker URL will be `https://sarasota-cad-proxy.your-username.workers.dev`.
+5. In `index.html`, confirm the `WORKER_URL` variable matches your deployed Worker URL.
+
+The Cloudflare free tier allows 100,000 requests per day, which is well within range for a 60-second refresh cycle.
 
 ## Limitations
 
-- The county dispatch site serves rendered HTML rather than a JSON API. Changes to the site's layout could break the parser.
-- Medical incident addresses are withheld by the dispatch system for privacy and are not mapped.
-- Nominatim geocoding is free but rate-limited. If an address cannot be found, no marker is shown rather than an incorrect one.
-- The Cloudflare Worker free tier allows 100,000 requests per day, which is well within range for a 60-second refresh cycle.
+- The county dispatch site serves rendered HTML rather than a JSON API. Changes to the site layout could break the parser.
+- Nominatim geocoding is free but rate-limited. When an address cannot be reliably found within the region, no marker is shown rather than an incorrect one.
+- The county site typically shows the past 24 to 48 hours of incidents. Quieter agencies such as North Port may show no results if there have been no calls in that window.
