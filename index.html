@@ -538,10 +538,25 @@
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18}).addTo(map);
 
   function makeIcon(bg, glow, emoji) {
+    var html = [
+      '<div style="',
+        'width:34px;height:34px;',
+        'background:', bg, ';',
+        'border:2px solid ', glow, ';',
+        'border-radius:50%;',
+        'display:flex;align-items:center;justify-content:center;',
+        'box-shadow:0 0 10px ', glow, ';',
+        'font-size:16px;line-height:1;',
+      '">',
+      emoji,
+      '</div>'
+    ].join('');
     return L.divIcon({
       className: "",
-      html: "<div style=\"width:28px;height:28px;background:" + bg + ";border:1px solid " + glow + ";clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px " + glow + "\"><span style=\"font-size:11px;line-height:1\">" + emoji + "</span></div>",
-      iconSize:[28,28], iconAnchor:[14,14], popupAnchor:[0,-16]
+      html: html,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -20]
     });
   }
 
