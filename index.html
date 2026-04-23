@@ -26,7 +26,11 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
 
   body {
     background: var(--bg);
@@ -324,6 +328,8 @@
 
   /* Mobile: stack vertically, restore normal scroll */
   @media (max-width: 768px) {
+    html, body { overflow: auto; }
+
     .main-layout {
       position: relative;
       flex-direction: column;
@@ -752,37 +758,30 @@
     return merged;
   }
 
-  // Bounding box covering Sarasota + Charlotte, Manatee, DeSoto, Hardee counties
   var SC_BOUNDS = {
     minLat: 26.50, maxLat: 27.90,
     minLng: -82.90, maxLng: -81.60
   };
 
-  function inSarasota(lat, lng) {
+  function inRegion(lat, lng) {
     return lat >= SC_BOUNDS.minLat && lat <= SC_BOUNDS.maxLat &&
            lng >= SC_BOUNDS.minLng && lng <= SC_BOUNDS.maxLng;
-  }
-
-  function sleep(ms) {
-    return new Promise(function(resolve) { setTimeout(resolve, ms); });
   }
 
   async function geocode(address) {
     if (geocodeCache[address] !== undefined) return geocodeCache[address];
     try {
-      // Small delay to avoid Nominatim rate limiting (max 1 req/sec)
-      await sleep(300);
-      var formatted = address.trim().replace(/\s*\/\s*/g, " AND ") + ", Sarasota County, FL";
-      var url = "https://nominatim.openstreetmap.org/search?q=" + encodeURIComponent(formatted) +
-                "&format=json&limit=5&countrycodes=us";
-      var r = await fetch(url, {
-        headers: {"Accept-Language":"en", "User-Agent":"SarasotaCAD/2.0"}
-      });
+      var q = address.trim().replace(/\s*\/\s*/g, " and ") + " Sarasota Florida";
+      var url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) +
+                "&limit=5&lang=en&bbox=-82.90,26.50,-81.60,27.90";
+      var r = await fetch(url);
       var data = await r.json();
-      for (var i = 0; i < data.length; i++) {
-        var lat = parseFloat(data[i].lat);
-        var lng = parseFloat(data[i].lon);
-        if (inSarasota(lat, lng)) {
+      var features = data.features || [];
+      for (var i = 0; i < features.length; i++) {
+        var coords = features[i].geometry && features[i].geometry.coordinates;
+        if (!coords) continue;
+        var lng = coords[0], lat = coords[1];
+        if (inRegion(lat, lng)) {
           var result = {lat: lat, lng: lng};
           geocodeCache[address] = result;
           return result;
