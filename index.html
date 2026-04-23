@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sarasota County CAD Feed</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg:      #07111e;
+    --surface: #0c1a2a;
+    --border:  #1a3550;
+    --border2: #2a5070;
+    --accent:  #00d4ff;
+    --accent2: #00aadd;
+    --red:     #ff3a3a;
+    --red2:    #cc1010;
+    --amber:   #ffbb00;
+    --green:   #00ff88;
+    --text:    #c8e0f4;
+    --text2:   #e8f4ff;
+    --muted:   #5a7a96;
+    --dim:     #2a4a66;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,180,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,180,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none; z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    pointer-events: none;
+  }
+
+  .vignette { display: none; }
+
+  /* ===== HEADER ===== */
+  header {
+    background: linear-gradient(180deg, #0a1828 0%, #0c1e30 100%);
+    border-bottom: 1px solid var(--border2);
+    padding: 14px 20px;
+    box-shadow: 0 2px 30px rgba(0,180,255,0.07);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  header::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--red), var(--accent), transparent);
+    animation: topline 4s ease-in-out infinite;
+  }
+
+  @keyframes topline { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+  .header-row1 { display: flex; align-items: center; gap: 10px; }
+
+  .header-row2 {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+  .brand-shield {
+    width: 48px; height: 48px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--red2), var(--red));
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    animation: shield-pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes shield-pulse {
+    0%,100% { box-shadow: 0 0 16px rgba(255,58,58,0.5), 0 0 40px rgba(255,58,58,0.2); }
+    50%      { box-shadow: 0 0 24px rgba(255,58,58,0.8), 0 0 60px rgba(255,58,58,0.4); }
+  }
+
+  .brand-text {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-size: 26px; letter-spacing: 5px; color: var(--text2);
+    text-shadow: 0 0 20px rgba(0,212,255,0.3); white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .brand-sub {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; letter-spacing: 3px; color: var(--muted);
+    margin-top: 2px; white-space: nowrap; text-transform: uppercase;
+  }
+
+  .live-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.3);
+    padding: 6px 12px; font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; letter-spacing: 3px; color: var(--green);
+    text-shadow: 0 0 8px var(--green); text-transform: uppercase;
+  }
+
+  .live-dot {
+    width: 8px; height: 8px; background: var(--green); border-radius: 50%;
+    box-shadow: 0 0 8px var(--green); animation: blink 0.8s step-end infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  #clock {
+    font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 600;
+    color: var(--accent); letter-spacing: 3px;
+    text-shadow: 0 0 12px rgba(0,212,255,0.6);
+  }
+
+  .refresh-btn {
+    background: rgba(0,180,255,0.05); border: 1px solid var(--border2);
+    color: var(--muted); font-family: 'Share Tech Mono', monospace;
+    font-size: 20px; padding: 6px 14px; cursor: pointer; transition: all 0.2s; line-height: 1;
+  }
+  .refresh-btn:hover, .refresh-btn:active { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px rgba(0,212,255,0.2); }
+  .refresh-btn.spinning { animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== STATS ===== */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--surface); border-bottom: 1px solid var(--border2);
+    position: relative; z-index: 1;
+  }
+
+  .stat { padding: 16px 8px; text-align: center; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Rajdhani', sans-serif; font-size: 48px; font-weight: 700;
+    line-height: 1; color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,212,255,0.5); transition: all 0.4s;
+  }
+  .stat-num.red   { color: var(--red);   text-shadow: 0 0 20px rgba(255,58,58,0.6); }
+  .stat-num.amber { color: var(--amber); text-shadow: 0 0 20px rgba(255,187,0,0.5); }
+  .stat-num.green { color: var(--green); text-shadow: 0 0 20px rgba(0,255,136,0.5); }
+
+  .stat-label {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; letter-spacing: 4px; color: var(--muted);
+    margin-top: 4px; text-transform: uppercase;
+  }
+
+  /* ===== AGENCY FILTER ROW ===== */
+  .agency-bar {
+    display: flex; background: rgba(8,18,32,0.9); border-bottom: 1px solid var(--border2);
+    overflow-x: auto; scrollbar-width: none; position: relative; z-index: 1;
+    padding: 0 2px;
+  }
+  .agency-bar::-webkit-scrollbar { display: none; }
+
+  .agency-btn {
+    flex-shrink: 0; padding: 10px 16px;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 400;
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+
+  .agency-btn.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+    background: rgba(0,212,255,0.06);
+    text-shadow: 0 0 8px rgba(0,212,255,0.4);
+  }
+
+  .agency-btn.npfd.active  { color: #ff6060; border-bottom-color: #ff6060; background: rgba(255,60,60,0.05); }
+  .agency-btn.scfd.active  { color: var(--accent); border-bottom-color: var(--accent); }
+  .agency-btn.vfd.active   { color: #60c0ff; border-bottom-color: #60c0ff; background: rgba(96,192,255,0.05); }
+  .agency-btn.efd.active   { color: var(--amber); border-bottom-color: var(--amber); background: rgba(255,187,0,0.05); }
+  .agency-btn.nvfd.active  { color: #80ff80; border-bottom-color: #80ff80; background: rgba(128,255,128,0.05); }
+  .agency-btn.other.active { color: #c080ff; border-bottom-color: #c080ff; background: rgba(192,128,255,0.05); }
+
+  /* ===== MAP ===== */
+  .map-section { border-bottom: 1px solid var(--border2); position: relative; z-index: 1; }
+
+  .map-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px; background: rgba(0,10,20,0.9); border-bottom: 1px solid var(--border);
+  }
+
+  .map-title {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; letter-spacing: 4px; color: var(--accent2); text-transform: uppercase;
+  }
+
+  .map-legend { display: flex; gap: 16px; align-items: center; }
+
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+  }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  #map { height: 320px; width: 100%; background: #020810; z-index: 1; }
+
+  .leaflet-tile-pane { filter: brightness(0.7) saturate(0.5) hue-rotate(190deg); }
+  .leaflet-control-zoom { border: 1px solid var(--border2) !important; border-radius: 0 !important; }
+  .leaflet-control-zoom a { background: #0a1828 !important; color: var(--accent) !important; border-color: var(--border2) !important; border-radius: 0 !important; }
+  .leaflet-popup-content-wrapper { background: rgba(10,25,45,0.98) !important; border: 1px solid var(--border2) !important; border-radius: 0 !important; color: var(--text) !important; box-shadow: 0 4px 30px rgba(0,0,0,0.6) !important; }
+  .leaflet-popup-tip { background: #0a1828 !important; }
+  .leaflet-popup-content { font-family: 'Barlow Condensed', sans-serif !important; font-size: 15px !important; margin: 12px 16px !important; line-height: 1.5 !important; }
+  .popup-type { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--text2); margin-bottom:5px; letter-spacing:2px; text-transform:uppercase; }
+  .popup-addr { color:var(--muted); font-size:13px; font-family:'Share Tech Mono',monospace; }
+  .popup-time { color:var(--accent); font-size:11px; font-family:'Share Tech Mono',monospace; margin-top:6px; letter-spacing:1px; }
+
+  /* ===== TYPE FILTER TABS ===== */
+  .filter-bar {
+    display: flex; background: var(--surface); border-bottom: 1px solid var(--border2);
+    overflow-x: auto; scrollbar-width: none; position: relative; z-index: 1;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex: 1; min-width: 70px; padding: 12px 4px;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 400;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+
+  .tab.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+    text-shadow: 0 0 8px rgba(0,212,255,0.4);
+  }
+
+  /* ===== SIDE BY SIDE LAYOUT ===== */
+  /* Body is a vertical flex container so top bars take natural height
+     and main-layout gets all remaining space */
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main-layout {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  /* Left: map column */
+  .map-col {
+    width: 42%;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border2);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .map-col .map-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-bottom: none;
+    overflow: hidden;
+  }
+
+  .map-col #map {
+    flex: 1;
+    height: auto !important;
+    min-height: 0;
+  }
+
+  /* Right: incident list column */
+  .list-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .filter-bar { flex-shrink: 0; }
+  #status-bar { flex-shrink: 0; }
+  .list-footer { flex-shrink: 0; }
+
+  #incident-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    html, body { overflow: auto; }
+
+    body { display: block; }
+
+    .main-layout {
+      flex-direction: column;
+      height: auto;
+      overflow: visible;
+    }
+
+    .map-col {
+      width: 100%;
+      height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border2);
+      overflow: visible;
+    }
+
+    .map-col #map { height: 260px !important; }
+
+    .list-col { overflow: visible; height: auto; }
+
+    #incident-list { overflow: visible; flex: none; }
+  }
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 2px; padding: 7px 18px; text-align: center;
+    display: none; position: relative; z-index: 1;
+  }
+  #status-bar.warn  { display:block; background:rgba(255,170,0,0.06); border-bottom:1px solid rgba(255,170,0,0.2); color:var(--amber); }
+  #status-bar.error { display:block; background:rgba(255,58,58,0.06); border-bottom:1px solid rgba(255,58,58,0.2); color:var(--red); }
+  #status-bar.good  { display:block; background:rgba(0,255,136,0.04); border-bottom:1px solid rgba(0,255,136,0.15); color:var(--green); }
+
+  /* ===== INCIDENT LIST ===== */
+  #incident-list { padding-bottom: 40px; position: relative; z-index: 1; }
+
+  .state-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 200px; gap: 14px;
+    color: var(--muted); font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 3px;
+  }
+
+  .spinner {
+    width: 28px; height: 28px; border: 1px solid var(--border2);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+
+  .inc-card {
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 16px 20px; border-bottom: 1px solid rgba(26,53,80,0.6);
+    border-left: 3px solid transparent; transition: all 0.15s;
+    animation: fadein 0.3s ease; cursor: pointer; position: relative;
+  }
+
+  @keyframes fadein { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:none; } }
+
+  .inc-card:active { background: rgba(0,212,255,0.03); }
+  .inc-card.is-today { border-left-color: var(--red); background: rgba(255,58,58,0.04); }
+  .inc-card.is-older { opacity: 0.7; }
+  .inc-card.highlighted { background: rgba(0,212,255,0.05) !important; border-left-color: var(--accent) !important; opacity: 1 !important; }
+
+  /* Agency color left border overrides */
+  .inc-card.agency-npfd.is-today { border-left-color: #ff6060; }
+  .inc-card.agency-vfd.is-today  { border-left-color: #60c0ff; }
+  .inc-card.agency-efd.is-today  { border-left-color: var(--amber); }
+  .inc-card.agency-nvfd.is-today { border-left-color: #80ff80; }
+
+  .inc-icon {
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0; border: 1px solid; position: relative;
+  }
+
+  .inc-icon::before, .inc-icon::after {
+    content: ''; position: absolute;
+    width: 8px; height: 8px; border-color: inherit; border-style: solid; opacity: 0.4;
+  }
+  .inc-icon::before { top:-1px; left:-1px; border-width:1px 0 0 1px; }
+  .inc-icon::after  { bottom:-1px; right:-1px; border-width:0 1px 1px 0; }
+
+  .icon-fire    { background:rgba(255,100,0,0.08);  border-color:rgba(255,100,0,0.4); }
+  .icon-marine  { background:rgba(0,160,255,0.1);  border-color:rgba(0,160,255,0.35); }
+  .icon-traffic { background:rgba(0,180,255,0.06);  border-color:rgba(0,180,255,0.3); }
+  .icon-alarm   { background:rgba(255,187,0,0.06);  border-color:rgba(255,187,0,0.3); }
+  .icon-other   { background:rgba(60,100,140,0.06); border-color:rgba(60,100,140,0.3); }
+
+  .inc-body { flex: 1; min-width: 0; }
+
+  .inc-type {
+    font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 600;
+    color: var(--text2); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; letter-spacing: 1px;
+  }
+
+  .inc-addr {
+    font-family: 'Inter', sans-serif; font-weight: 400;
+    font-size: 14px; color: var(--text); margin-top: 5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .inc-addr.no-addr { color: var(--muted); font-style: italic; font-size: 13px; }
+
+  .inc-case {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; color: var(--muted); margin-top: 6px; letter-spacing: 0.5px;
+  }
+
+  /* Agency tag */
+  .agency-tag {
+    display: inline-block; font-family: 'Inter', sans-serif; font-weight: 500;
+    font-size: 10px; letter-spacing: 1.5px; padding: 2px 7px;
+    border: 1px solid var(--border); color: var(--muted);
+    margin-right: 6px; vertical-align: middle; text-transform: uppercase;
+  }
+  .agency-tag.npfd { border-color:rgba(255,96,96,0.4); color:#ff6060; }
+  .agency-tag.scfd { border-color:rgba(0,212,255,0.3); color:var(--accent2); }
+  .agency-tag.vfd  { border-color:rgba(96,192,255,0.3); color:#60c0ff; }
+  .agency-tag.efd  { border-color:rgba(255,187,0,0.3); color:var(--amber); }
+  .agency-tag.nvfd { border-color:rgba(128,255,128,0.3); color:#80ff80; }
+  .agency-tag.other { border-color:rgba(192,128,255,0.3); color:#c080ff; }
+
+  .inc-meta { text-align: right; flex-shrink: 0; }
+
+  .inc-time {
+    font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 600;
+    color: var(--accent); letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(0,212,255,0.4);
+  }
+
+  .inc-date {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; color: var(--muted); margin-top: 3px; letter-spacing: 1px;
+  }
+
+  .status-badge {
+    display: inline-block; font-family: 'Inter', sans-serif; font-weight: 500;
+    font-size: 9px; letter-spacing: 2px; padding: 3px 7px;
+    margin-top: 5px; text-transform: uppercase;
+  }
+  .badge-today { background:rgba(255,58,58,0.12); color:var(--red); border:1px solid rgba(255,58,58,0.3); text-shadow:0 0 6px rgba(255,58,58,0.5); }
+  .badge-older { background:rgba(30,50,80,0.3); color:var(--muted); border:1px solid var(--border); }
+
+  #last-updated {
+    text-align: center; font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; color: var(--muted); letter-spacing: 2px; padding: 16px;
+    position: relative; z-index: 1; text-transform: uppercase;
+  }
+
+  .source-note {
+    text-align: center; font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; color: var(--dim); letter-spacing: 1px;
+    padding: 0 14px 24px; position: relative; z-index: 1;
+  }
+  .source-note a { color: var(--accent2); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+
+<!-- TOP BARS: full width -->
+<header>
+  <div class="header-row1">
+    <div class="brand">
+      <div class="brand-shield">&#x1F6A8;</div>
+      <div>
+        <div class="brand-text">SARASOTA CO. CAD</div>
+        <div class="brand-sub">911 DISPATCH // LIVE FEED</div>
+      </div>
+    </div>
+  </div>
+  <div class="header-row2">
+    <div class="live-pill"><div class="live-dot"></div>ONLINE</div>
+    <div id="clock">--:--:--</div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadIncidents()">&#x21BB;</button>
+  </div>
+</header>
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-num red"   id="s-today">--</div><div class="stat-label">Today</div></div>
+  <div class="stat"><div class="stat-num amber"  id="s-fire">--</div><div class="stat-label">Fire</div></div>
+  <div class="stat"><div class="stat-num"        id="s-traffic">--</div><div class="stat-label">Traffic</div></div>
+  <div class="stat"><div class="stat-num green"  id="s-total">--</div><div class="stat-label">Total</div></div>
+</div>
+
+<div class="agency-bar" id="agency-bar">
+  <button class="agency-btn active" onclick="setAgency('all',this)">All</button>
+  <button class="agency-btn npfd"  onclick="setAgency('npfd',this)">N. Port</button>
+  <button class="agency-btn scfd"  onclick="setAgency('scfd',this)">SCFD</button>
+  <button class="agency-btn vfd"   onclick="setAgency('vfd',this)">Venice</button>
+  <button class="agency-btn efd"   onclick="setAgency('efd',this)">Englewood</button>
+  <button class="agency-btn nvfd"  onclick="setAgency('nvfd',this)">Nokomis</button>
+  <button class="agency-btn other" onclick="setAgency('other',this)">Other</button>
+</div>
+
+<!-- SIDE BY SIDE: map left, list right -->
+<div class="main-layout">
+
+  <!-- LEFT: Map column -->
+  <div class="map-col">
+    <div class="map-section">
+      <div class="map-header">
+        <div class="map-title">Sarasota County, FL</div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#ff3a3a;box-shadow:0 0 4px #ff3a3a"></div>TODAY</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#2a4a66"></div>PRIOR</div>
+        </div>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Incident list column -->
+  <div class="list-col">
+    <div class="filter-bar">
+      <button class="tab active" onclick="setFilter('all',this)">All</button>
+      <button class="tab" onclick="setFilter('today',this)">Today</button>
+      <button class="tab" onclick="setFilter('fire',this)">Fire</button>
+      <button class="tab" onclick="setFilter('marine',this)">Marine</button>
+      <button class="tab" onclick="setFilter('traffic',this)">Traffic</button>
+      <button class="tab" onclick="setFilter('alarm',this)">Alarms</button>
+    </div>
+
+    <div id="status-bar"></div>
+    <div id="incident-list">
+      <div class="state-screen"><div class="spinner"></div><span>ACQUIRING FEED...</span></div>
+    </div>
+    <div class="list-footer">
+      <div id="last-updated"></div>
+      <div class="source-note">SRC: <a href="https://dispatchreporting.scgov.net" target="_blank">dispatchreporting.scgov.net</a></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var WORKER_URL = "https://sarasota-cad-proxy.yanks126.workers.dev";
+
+  function tick() {
+    document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false});
+  }
+  setInterval(tick, 1000); tick();
+
+  // Map centered on Sarasota County
+  var SC_LAT = 27.10, SC_LNG = -82.25;
+  var map = L.map("map", {center:[SC_LAT, SC_LNG], zoom:10, zoomControl:true, attributionControl:false});
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18}).addTo(map);
+
+  function makeIcon(bg, glow, emoji) {
+    var html = [
+      '<div style="',
+        'width:34px;height:34px;',
+        'background:', bg, ';',
+        'border:2px solid ', glow, ';',
+        'border-radius:50%;',
+        'display:flex;align-items:center;justify-content:center;',
+        'box-shadow:0 0 10px ', glow, ';',
+        'font-size:16px;line-height:1;',
+      '">',
+      emoji,
+      '</div>'
+    ].join('');
+    return L.divIcon({
+      className: "",
+      html: html,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -20]
+    });
+  }
+
+  var ICONS = {
+    fire_today:    makeIcon("rgba(255,80,0,0.9)",   "rgba(255,100,0,0.8)",  "\uD83D\uDD25"),
+    traffic_today: makeIcon("rgba(0,160,255,0.9)",  "rgba(0,200,255,0.8)",  "\uD83D\uDE97"),
+    alarm_today:   makeIcon("rgba(255,180,0,0.9)",  "rgba(255,200,0,0.8)",  "\u26A0"),
+    marine_today:  makeIcon("rgba(0,140,220,0.9)",  "rgba(0,180,255,0.8)",  "\u26F5"),
+    other_today:   makeIcon("rgba(60,120,180,0.9)", "rgba(80,150,220,0.8)", "\u26A1"),
+    fire_older:    makeIcon("rgba(80,40,0,0.6)",    "rgba(120,60,0,0.4)",   "\uD83D\uDD25"),
+    traffic_older: makeIcon("rgba(0,60,100,0.6)",   "rgba(0,100,150,0.4)",  "\uD83D\uDE97"),
+    alarm_older:   makeIcon("rgba(80,60,0,0.6)",    "rgba(120,100,0,0.4)",  "\u26A0"),
+    marine_older:  makeIcon("rgba(0,50,90,0.6)",    "rgba(0,80,140,0.4)",   "\u26F5"),
+    other_older:   makeIcon("rgba(20,40,60,0.6)",   "rgba(40,70,100,0.4)",  "\u26A1"),
+  };
+
+  var mapMarkers = [];
+  var allIncidents = [];
+  var currentFilter = "all";
+  var currentAgency = "all";
+  var geocodeCache = {};
+  var idCounter = 0;
+
+  // Determine agency from case number prefix
+  function getAgency(caseNum) {
+    if (!caseNum) return "other";
+    var c = caseNum.toUpperCase();
+    if (c.indexOf("NPFD") === 0) return "npfd";
+    if (c.indexOf("SCFD") === 0) return "scfd";
+    if (c.indexOf("VFD")  === 0) return "vfd";
+    if (c.indexOf("EFD")  === 0) return "efd";
+    if (c.indexOf("NVFD") === 0) return "nvfd";
+    if (c.indexOf("LBFD") === 0) return "lbfd";
+    return "other";
+  }
+
+  function getAgencyLabel(agency) {
+    var labels = {npfd:"N.PORT", scfd:"SCFD", vfd:"VENICE", efd:"ENGLEWOOD", nvfd:"NOKOMIS", lbfd:"LBKEY", other:"OTHER"};
+    return labels[agency] || "OTHER";
+  }
+
+  function category(t) {
+    if (!t) return "other";
+    t = t.toUpperCase();
+    // Traffic must be checked FIRST so crash/collision incidents are not caught by injury patterns
+    if (/TRAFFIC|CRASH|COLLISION|ACCIDENT|MVC/.test(t)) return "traffic";
+    if (/ALARM|CARBON|MONOXIDE/.test(t)) return "alarm";
+    if (/FIRE|BRUSH|EXPLOSION|STRUCTURE|SMOKE|HAZMAT|BURNING|OUTSIDE FIRE|ELECTRICAL/.test(t)) return "fire";
+    if (/MARINE|WATER|BOAT|DROWNING|FLOOD|SWIFT WATER|SURF|DIVE|VESSEL/.test(t)) return "marine";
+    return "other";
+  }
+
+  function hasAddress(location) {
+    if (!location || location.trim().length < 4) return false;
+    var l = location.trim().toUpperCase();
+    if (/^(GRID|REDACTED|UNKNOWN|N\/A|NONE)$/.test(l)) return false;
+    // Only map if there is a street number (digits at the start)
+    // Excludes: bare street names, intersections, mile marker addresses
+    return /^\d+\s+\w/.test(l);
+  }
+
+  var CAT_EMOJI = {fire:"\uD83D\uDD25", marine:"\u26F5", traffic:"\uD83D\uDE97", alarm:"\u26A0", other:"\u26A1"};
+  var CAT_CLS   = {fire:"icon-fire", marine:"icon-marine", traffic:"icon-traffic", alarm:"icon-alarm", other:"icon-other"};
+
+  function getTodayStr() {
+    var d = new Date();
+    var mm = String(d.getMonth()+1).padStart(2,"0");
+    var dd = String(d.getDate()).padStart(2,"0");
+    var yy = String(d.getFullYear()).slice(-2);
+    return mm + "/" + dd + "/" + yy;
+  }
+
+  function setStatus(msg, cls) {
+    var el = document.getElementById("status-bar");
+    el.className = cls || "";
+    el.textContent = msg;
+  }
+
+  function parseDispatchHTML(html) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, "text/html");
+    var rows = doc.querySelectorAll("tr");
+    var raw = [];
+    var currentDate = "";
+    var todayStr = getTodayStr();
+
+    rows.forEach(function(row) {
+      var fullText = row.textContent.trim();
+      if (fullText.indexOf("Event Date:") !== -1) {
+        var match = fullText.match(/(\d{2}\/\d{2}\/\d{2})/);
+        if (match) currentDate = match[1];
+        return;
+      }
+
+      var cells = row.querySelectorAll("td");
+      if (cells.length < 7) return;
+
+      var time    = cells[0].textContent.trim() || cells[1].textContent.trim();
+      var event   = cells[2].textContent.trim();
+      var location= cells[3].textContent.trim();
+      var grid    = cells[4].textContent.trim();
+      var zone    = cells[5].textContent.trim();
+      var caseNum = cells[6].textContent.trim();
+
+      if (!event || !caseNum) return;
+
+      raw.push({
+        date: currentDate, time: time, eventType: event,
+        location: location, grid: grid, zone: zone,
+        caseNum: caseNum, agency: getAgency(caseNum),
+        isToday: currentDate === todayStr,
+        mappable: hasAddress(location)
+      });
+    });
+
+    // Deduplicate: same eventType + location + time + date = one incident
+    // Collect all agencies into an array on the first match
+    var merged = [];
+    var seen = {};
+
+    raw.forEach(function(row) {
+      var key = row.date + "|" + row.time + "|" + row.eventType.toUpperCase() + "|" + row.location.toUpperCase();
+      if (seen[key] !== undefined) {
+        // Add agency to existing incident if not already present
+        var existing = merged[seen[key]];
+        if (existing.agencies.indexOf(row.agency) === -1) {
+          existing.agencies.push(row.agency);
+          existing.caseNums.push(row.caseNum);
+        }
+      } else {
+        seen[key] = merged.length;
+        merged.push({
+          date:      row.date,
+          time:      row.time,
+          eventType: row.eventType,
+          location:  row.location,
+          grid:      row.grid,
+          zone:      row.zone,
+          caseNum:   row.caseNum,
+          caseNums:  [row.caseNum],
+          agency:    row.agency,
+          agencies:  [row.agency],
+          isToday:   row.isToday,
+          mappable:  row.mappable,
+          _id:       "inc" + (++idCounter)
+        });
+      }
+    });
+
+    return merged;
+  }
+
+  var GOOGLE_KEY = "AIzaSyBowH_UlTDT0L9cCLoEi34tlChTFA6i2q4";
+
+  var SC_BOUNDS = {
+    minLat: 26.50, maxLat: 27.90,
+    minLng: -82.90, maxLng: -81.60
+  };
+
+  function inRegion(lat, lng) {
+    return lat >= SC_BOUNDS.minLat && lat <= SC_BOUNDS.maxLat &&
+           lng >= SC_BOUNDS.minLng && lng <= SC_BOUNDS.maxLng;
+  }
+
+  function cityFromZone(zone) {
+    if (!zone) return "";
+    var z = zone.toUpperCase();
+    if (z.indexOf("VENICE") !== -1)     return "Venice";
+    if (z.indexOf("ENGLEWOOD") !== -1)  return "Englewood";
+    if (z.indexOf("NOKOMIS") !== -1)    return "Nokomis";
+    if (z.indexOf("NORTH PORT") !== -1 || z.indexOf("NPFD") !== -1) return "North Port";
+    if (z.indexOf("LONGBOAT") !== -1)   return "Longboat Key";
+    if (z.indexOf("OSPREY") !== -1)     return "Osprey";
+    return "Sarasota";
+  }
+
+  async function geocode(address, cityHint) {
+    var cacheKey = address + "|" + (cityHint || "");
+    if (geocodeCache[cacheKey] !== undefined) return geocodeCache[cacheKey];
+    var city = cityHint || "Sarasota";
+    try {
+      var q = address.trim() + ", " + city + ", FL";
+      var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+                encodeURIComponent(q) +
+                "&bounds=26.50,-82.90|27.90,-81.60" +
+                "&key=" + GOOGLE_KEY;
+      var r = await fetch(url);
+      var data = await r.json();
+      if (data.status === "OK" && data.results && data.results.length > 0) {
+        var loc = data.results[0].geometry.location;
+        if (inRegion(loc.lat, loc.lng)) {
+          var result = {lat: loc.lat, lng: loc.lng};
+          geocodeCache[cacheKey] = result;
+          return result;
+        }
+      }
+    } catch(e) {}
+    geocodeCache[cacheKey] = null;
+    return null;
+  }
+
+  async function renderMap(incidents) {
+    mapMarkers.forEach(function(m) { map.removeLayer(m); });
+    mapMarkers = [];
+
+    var mappable = incidents.filter(function(i) { return i.mappable; });
+    if (!mappable.length) return;
+
+    // Geocode all addresses in parallel using zone as city hint for accuracy
+    await Promise.all(mappable.map(async function(inc) {
+      if (!inc._lat) {
+        var city = cityFromZone(inc.zone || inc.agency || "");
+        var c = await geocode(inc.location, city);
+        if (c) { inc._lat = c.lat; inc._lng = c.lng; }
+      }
+    }));
+
+    var bounds = [];
+    mappable.forEach(function(inc) {
+      if (!inc._lat) return; // skip if geocode failed
+
+      var cat = category(inc.eventType);
+      var suffix = inc.isToday ? "_today" : "_older";
+      var icon = ICONS[cat + suffix] || ICONS["other_today"];
+
+      var marker = L.marker([inc._lat, inc._lng], {icon: icon})
+        .bindPopup(
+          "<div class=\"popup-type\">" + inc.eventType + "</div>" +
+          "<div class=\"popup-addr\">" + inc.location + "</div>" +
+          "<div class=\"popup-time\">" + inc.date + " // " + inc.time + " // " + inc.caseNum + "</div>"
+        )
+        .addTo(map);
+
+      (function(id) {
+        marker._incId = id;
+        marker.on("click", function() {
+          document.querySelectorAll(".inc-card").forEach(function(c) { c.classList.remove("highlighted"); });
+          var card = document.getElementById("card-" + id);
+          if (card) { card.classList.add("highlighted"); card.scrollIntoView({behavior:"smooth", block:"nearest"}); }
+        });
+      })(inc._id);
+
+      mapMarkers.push(marker);
+      bounds.push([inc._lat, inc._lng]);
+    });
+
+    if (bounds.length) {
+      try { map.fitBounds(bounds, {padding:[28,28], maxZoom:14}); }
+      catch(e) { map.setView([SC_LAT, SC_LNG], 10); }
+    }
+  }
+
+  function getFiltered() {
+    var out = allIncidents;
+    // Agency filter — check if any of the incident's agencies match
+    if (currentAgency !== "all") {
+      if (currentAgency === "other") {
+        out = out.filter(function(i) {
+          return i.agencies.some(function(a) { return a === "other" || a === "lbfd"; });
+        });
+      } else {
+        out = out.filter(function(i) {
+          return i.agencies.indexOf(currentAgency) !== -1;
+        });
+      }
+    }
+    // Type filter
+    if (currentFilter === "today")   out = out.filter(function(i) { return i.isToday; });
+    if (currentFilter === "fire")    out = out.filter(function(i) { return category(i.eventType) === "fire"; });
+    if (currentFilter === "marine")  out = out.filter(function(i) { return category(i.eventType) === "marine"; });
+    if (currentFilter === "traffic") out = out.filter(function(i) { return category(i.eventType) === "traffic"; });
+    if (currentFilter === "alarm")   out = out.filter(function(i) { return category(i.eventType) === "alarm"; });
+    return out;
+  }
+
+  function renderList(incidents) {
+    var el = document.getElementById("incident-list");
+    if (!incidents.length) {
+      var msg = currentAgency !== "all"
+        ? "NO " + currentAgency.toUpperCase() + " INCIDENTS IN CURRENT FEED"
+        : "NO INCIDENTS IN FEED";
+      el.innerHTML = "<div class=\"state-screen\"><span style=\"font-size:28px\">&#x1F4E1;</span><span>" + msg + "</span></div>";
+      renderMap([]);
+      return;
+    }
+
+    el.innerHTML = incidents.map(function(inc) {
+      var cat = category(inc.eventType);
+      var ag = inc.agency || "other";
+      var addrHtml = inc.location
+        ? "<div class=\"inc-addr\">&#x25B8; " + inc.location + "</div>"
+        : "";
+
+      // Build all agency tags
+      var agencyTags = (inc.agencies || [ag]).map(function(a) {
+        return "<span class=\"agency-tag " + a + "\">" + getAgencyLabel(a) + "</span>";
+      }).join("");
+
+      return "<div class=\"inc-card " + (inc.isToday ? "is-today" : "is-older") + " agency-" + ag + "\" id=\"card-" + inc._id + "\" onclick=\"focusOnMap('" + inc._id + "')\">" +
+        "<div class=\"inc-icon " + CAT_CLS[cat] + "\">" + CAT_EMOJI[cat] + "</div>" +
+        "<div class=\"inc-body\">" +
+          "<div class=\"inc-type\">" + inc.eventType + "</div>" +
+          addrHtml +
+          "<div class=\"inc-case\">" + agencyTags + "</div>" +
+        "</div>" +
+        "<div class=\"inc-meta\">" +
+          "<div class=\"inc-time\">" + inc.time + "</div>" +
+          "<div class=\"inc-date\">" + inc.date + "</div>" +
+          "<div class=\"status-badge " + (inc.isToday ? "badge-today" : "badge-older") + "\">" + (inc.isToday ? "TODAY" : "PRIOR") + "</div>" +
+        "</div>" +
+      "</div>";
+    }).join("");
+
+    renderMap(incidents);
+  }
+
+  function focusOnMap(id) {
+    var inc = null;
+    for (var i = 0; i < allIncidents.length; i++) {
+      if (allIncidents[i]._id === id) { inc = allIncidents[i]; break; }
+    }
+    if (!inc) return;
+
+    // Highlight the card regardless
+    document.querySelectorAll(".inc-card").forEach(function(c) { c.classList.remove("highlighted"); });
+    var card = document.getElementById("card-" + id);
+    if (card) card.classList.add("highlighted");
+
+    // Pan map if we have coordinates
+    if (inc.mappable && inc._lat) {
+      map.setView([inc._lat, inc._lng], 15, {animate:true});
+      mapMarkers.forEach(function(m) { if (m._incId === id) m.openPopup(); });
+      return;
+    }
+
+    // Coordinates not yet loaded — geocode on demand then pan
+    if (inc.mappable && !inc._lat) {
+      var city = cityFromZone(inc.zone || inc.agency || "");
+      geocode(inc.location, city).then(function(c) {
+        if (!c) return;
+        inc._lat = c.lat;
+        inc._lng = c.lng;
+        map.setView([inc._lat, inc._lng], 15, {animate:true});
+        mapMarkers.forEach(function(m) { if (m._incId === id) m.openPopup(); });
+      });
+    }
+  }
+
+  function updateStats(list) {
+    var today   = list.filter(function(i) { return i.isToday; }).length;
+    var fire    = list.filter(function(i) { return category(i.eventType) === "fire"; }).length;
+    var traffic = list.filter(function(i) { return category(i.eventType) === "traffic"; }).length;
+    document.getElementById("s-today").textContent   = today;
+    document.getElementById("s-fire").textContent    = fire;
+    document.getElementById("s-traffic").textContent = traffic;
+    document.getElementById("s-total").textContent   = list.length;
+  }
+
+  function applyFilters() {
+    var filtered = getFiltered();
+    renderList(filtered);
+  }
+
+  function setAgency(a, btn) {
+    currentAgency = a;
+    document.querySelectorAll(".agency-btn").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    applyFilters();
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+    btn.classList.add("active");
+    applyFilters();
+  }
+
+  async function loadIncidents() {
+    var btn = document.getElementById("refresh-btn");
+    btn.classList.add("spinning");
+    document.getElementById("incident-list").innerHTML =
+      "<div class=\"state-screen\"><div class=\"spinner\"></div><span>ACQUIRING FEED...</span></div>";
+    setStatus("", "");
+
+    try {
+      var res = await fetch(WORKER_URL);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var html = await res.text();
+      var incidents = parseDispatchHTML(html);
+
+      if (!incidents.length) {
+        setStatus("No incidents in current feed", "warn");
+        allIncidents = [];
+        updateStats([]);
+        renderList([]);
+      } else {
+        allIncidents = incidents;
+        updateStats(allIncidents);
+        applyFilters();
+        setStatus("Live -- Sarasota County 911 Dispatch", "good");
+        setTimeout(function() { setStatus("", ""); }, 5000);
+      }
+
+      document.getElementById("last-updated").textContent =
+        "// LAST SYNC: " + new Date().toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false});
+
+    } catch(err) {
+      console.error(err);
+      setStatus("Feed error: " + err.message, "error");
+      document.getElementById("incident-list").innerHTML =
+        "<div class=\"state-screen\"><span style=\"font-size:28px\">&#x26A0;</span><span>FEED OFFLINE -- TAP REFRESH</span></div>";
+    } finally {
+      btn.classList.remove("spinning");
+    }
+  }
+
+  loadIncidents();
+  setInterval(loadIncidents, 60000);
+
+  // Let the layout render then tell Leaflet to fill the column
+  setTimeout(function() { map.invalidateSize(); }, 200);
+</script>
+</body>
+</html>
