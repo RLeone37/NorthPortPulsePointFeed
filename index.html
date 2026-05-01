@@ -3,587 +3,1101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Long Island Fire Tracker</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<title>Sarasota County CAD Feed</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-:root{--bg:#0d0f14;--surface:#161a22;--surface2:#1e2330;--border:#2a3045;--accent:#e8500a;--blue:#2e75b6;--text:#e8eaf0;--text2:#8a93a8;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:"Segoe UI",Arial,sans-serif;min-height:100vh;}
-@keyframes fireGrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes spinFire{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.tab.active{animation:fadeIn .2s ease}
-header{background:linear-gradient(270deg,#0a0c10,#1a0d05,#0d0810,#0a0c10);background-size:400% 400%;animation:fireGrad 8s ease infinite;border-bottom:2px solid var(--accent);padding:0 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(232,80,10,.3);gap:12px;}
-.hdr{display:flex;align-items:center;gap:14px;padding:11px 0;}
-.fi{font-size:1.9rem;filter:drop-shadow(0 0 8px rgba(232,80,10,.9));flex-shrink:0;}
-.ht h1{font-size:1.1rem;font-weight:700;letter-spacing:.03em;}
-.hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.county-sw{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
-.county-sw button{background:var(--surface2);border:none;color:var(--text2);padding:6px 12px;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;border-right:1px solid var(--border);}
-.county-sw button:last-child{border-right:none;}
-.county-sw button.active{background:var(--accent);color:#fff;}
-.county-sw button.soon{color:#3a4055;cursor:default;}
-#lu{font-size:.63rem;color:var(--text2);text-align:right;white-space:nowrap;}
-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;gap:2px;overflow-x:auto;}
-nav button{background:none;border:none;color:var(--text2);cursor:pointer;padding:10px 13px;font-size:.77rem;font-weight:600;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap;}
-nav button:hover{color:var(--text);}
-nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
-main{padding:18px 20px;max-width:1400px;margin:0 auto;}
-.tab{display:none;}.tab.active{display:block;}
-.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px;}
-.sc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden;transition:border-color .2s;}
-.sc:hover{border-color:var(--accent);}
-.sc::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);}
-.sc.bl::before{background:var(--blue);}.sc.gr::before{background:var(--green);}.sc.ye::before{background:var(--yellow);}
-.sl{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:5px;line-height:1.3;}
-.sv{font-size:1.6rem;font-weight:700;line-height:1.1;word-break:break-word;}
-.ss{font-size:.68rem;color:var(--text2);margin-top:3px;word-break:break-word;}
-.sd{font-size:.72rem;font-weight:600;margin-top:3px;}
-.sd.up{color:var(--green);}.sd.dn{color:var(--red);}
-.cg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
-.cg.t{grid-template-columns:2fr 1fr;}
-@media(max-width:900px){.cg,.cg.t{grid-template-columns:1fr;}}
-.cc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;}
-.ct{font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.ct .d{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}
-.ch-wrap{position:relative;height:240px;width:100%;}
-.pb{background:linear-gradient(90deg,rgba(232,80,10,.15),rgba(240,144,10,.1));border:1px solid rgba(232,80,10,.4);border-radius:8px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:12px;}
-.pb strong{color:var(--accent);}.pb p{font-size:.8rem;color:var(--text2);}
-.tw{overflow-x:auto;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;}
-table{width:100%;border-collapse:collapse;font-size:.78rem;}
-thead tr{background:var(--surface2);}
-thead th{padding:8px 10px;text-align:right;font-weight:700;text-transform:uppercase;font-size:.64rem;letter-spacing:.07em;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;}
-thead th:first-child,thead th:nth-child(2){text-align:left;}
-tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
-tbody tr:hover{background:var(--surface2);}
-tbody tr.br{background:rgba(46,117,182,.1);}
-tbody tr.br td{font-weight:700;color:var(--blue);}
-td{padding:7px 10px;text-align:right;color:var(--text);}
-td:first-child,td:nth-child(2){text-align:left;color:var(--text2);font-size:.75rem;}
-.dept-name{white-space:nowrap;}
-td.fc{font-weight:600;}td.zr{color:#3a4055;}
-.h1{}.h2{}.h3{}.h4{}
-.arr-up{color:var(--red)}.arr-dn{color:var(--green)}.arr-eq{color:var(--text2)}
-.ctrl{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
-.ctrl label{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
-select,input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:5px;font-size:.78rem;}
-select:focus,input:focus{outline:none;border-color:var(--accent);}
-.btn{background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:5px;font-size:.78rem;font-weight:600;cursor:pointer;}
-.btn:hover{background:#c4420a;}.btn.o{background:transparent;border:1px solid var(--accent);color:var(--accent);}
-.btn.sm{padding:4px 10px;font-size:.72rem;}
-.yp{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
-.yp span{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:4px 11px;border-radius:20px;font-size:.74rem;font-weight:600;cursor:pointer;transition:all .15s;}
-.yp span.active{background:var(--accent);border-color:var(--accent);color:#fff;}
-.yp span.ip{border-style:dashed;border-color:var(--yellow);color:var(--yellow);}
-.yp span.ip.active{background:var(--yellow);color:#000;}
-.sh{font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text2);border-bottom:1px solid var(--border);padding-bottom:7px;margin:18px 0 12px;display:flex;align-items:center;gap:8px;}
-.sh::before{content:"▐";color:var(--accent);}
-.ld{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:4px;animation:pulse 1.5s infinite;}
-.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:18px;}
-.rc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;position:relative;overflow:hidden;}
-.rc::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);}
-.rc.gold::before{background:#f59e0b;}.rc.blue::before{background:var(--blue);}.rc.green::before{background:var(--green);}.rc.red::before{background:var(--red);}
-.rl{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:6px;}
-.rv{font-size:1.35rem;font-weight:700;line-height:1.1;word-break:break-word;}
-.rs{font-size:.68rem;color:var(--text2);margin-top:3px;}
-.suffolk-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:18px;text-align:center;}
-.suffolk-ph .ic{font-size:3.5rem;opacity:.4;}
-.suffolk-ph h2{font-size:1.3rem;color:var(--text2);}
-.suffolk-ph p{font-size:.88rem;color:var(--text2);max-width:380px;line-height:1.6;}
-.suffolk-ph .badge{background:var(--surface2);border:1px dashed var(--border);color:var(--text2);padding:7px 18px;border-radius:20px;font-size:.76rem;}
-.uc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:18px;}
-.ugr{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:7px;margin:10px 0;}
-.mi{display:flex;flex-direction:column;gap:3px;}
-.mi label{font-size:.64rem;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
-.mi input{width:100%;text-align:center;}
-#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999;}
-.spin{font-size:2.5rem;display:inline-block;animation:spinFire 1s linear infinite;}
-footer{text-align:center;padding:18px;color:var(--text2);font-size:.7rem;border-top:1px solid var(--border);margin-top:28px;}
+  :root {
+    --bg:      #07111e;
+    --surface: #0c1a2a;
+    --border:  #1a3550;
+    --border2: #2a5070;
+    --accent:  #00d4ff;
+    --accent2: #00aadd;
+    --red:     #ff3a3a;
+    --red2:    #cc1010;
+    --amber:   #ffbb00;
+    --green:   #00ff88;
+    --text:    #c8e0f4;
+    --text2:   #e8f4ff;
+    --muted:   #5a7a96;
+    --dim:     #2a4a66;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,180,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,180,255,0.015) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none; z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    pointer-events: none;
+  }
+
+  .vignette { display: none; }
+
+  /* ===== HEADER ===== */
+  header {
+    background: linear-gradient(180deg, #0a1828 0%, #0c1e30 100%);
+    border-bottom: 1px solid var(--border2);
+    padding: 14px 20px;
+    box-shadow: 0 2px 30px rgba(0,180,255,0.07);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  header::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--red), var(--accent), transparent);
+    animation: topline 4s ease-in-out infinite;
+  }
+
+  @keyframes topline { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+  .header-row1 { display: flex; align-items: center; gap: 10px; }
+
+  .header-row2 {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+  .brand-shield {
+    width: 48px; height: 48px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--red2), var(--red));
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    animation: shield-pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes shield-pulse {
+    0%,100% { box-shadow: 0 0 16px rgba(255,58,58,0.5), 0 0 40px rgba(255,58,58,0.2); }
+    50%      { box-shadow: 0 0 24px rgba(255,58,58,0.8), 0 0 60px rgba(255,58,58,0.4); }
+  }
+
+  .brand-text {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-size: 26px; letter-spacing: 5px; color: var(--text2);
+    text-shadow: 0 0 20px rgba(0,212,255,0.3); white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .brand-sub {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; letter-spacing: 3px; color: var(--muted);
+    margin-top: 2px; white-space: nowrap; text-transform: uppercase;
+  }
+
+  .live-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.3);
+    padding: 6px 12px; font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; letter-spacing: 3px; color: var(--green);
+    text-shadow: 0 0 8px var(--green); text-transform: uppercase;
+  }
+
+  .live-dot {
+    width: 8px; height: 8px; background: var(--green); border-radius: 50%;
+    box-shadow: 0 0 8px var(--green); animation: blink 0.8s step-end infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  #clock {
+    font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 600;
+    color: var(--accent); letter-spacing: 3px;
+    text-shadow: 0 0 12px rgba(0,212,255,0.6);
+  }
+
+  .refresh-btn {
+    background: rgba(0,180,255,0.05); border: 1px solid var(--border2);
+    color: var(--muted); font-family: 'Share Tech Mono', monospace;
+    font-size: 20px; padding: 6px 14px; cursor: pointer; transition: all 0.2s; line-height: 1;
+  }
+  .refresh-btn:hover, .refresh-btn:active { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px rgba(0,212,255,0.2); }
+  .refresh-btn.spinning { animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== STATS ===== */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--surface); border-bottom: 1px solid var(--border2);
+    position: relative; z-index: 1;
+  }
+
+  .stat { padding: 16px 8px; text-align: center; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Rajdhani', sans-serif; font-size: 48px; font-weight: 700;
+    line-height: 1; color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,212,255,0.5); transition: all 0.4s;
+  }
+  .stat-num.red   { color: var(--red);   text-shadow: 0 0 20px rgba(255,58,58,0.6); }
+  .stat-num.amber { color: var(--amber); text-shadow: 0 0 20px rgba(255,187,0,0.5); }
+  .stat-num.green { color: var(--green); text-shadow: 0 0 20px rgba(0,255,136,0.5); }
+
+  .stat-label {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; letter-spacing: 4px; color: var(--muted);
+    margin-top: 4px; text-transform: uppercase;
+  }
+
+  /* ===== AGENCY FILTER ROW ===== */
+  .agency-bar {
+    display: flex; background: rgba(8,18,32,0.9); border-bottom: 1px solid var(--border2);
+    overflow-x: auto; scrollbar-width: none; position: relative; z-index: 1;
+    padding: 0 2px;
+  }
+  .agency-bar::-webkit-scrollbar { display: none; }
+
+  .agency-btn {
+    flex-shrink: 0; padding: 10px 16px;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 400;
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+
+  .agency-btn.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+    background: rgba(0,212,255,0.06);
+    text-shadow: 0 0 8px rgba(0,212,255,0.4);
+  }
+
+  .agency-btn.npfd.active  { color: #ff6060; border-bottom-color: #ff6060; background: rgba(255,60,60,0.05); }
+  .agency-btn.scfd.active  { color: var(--accent); border-bottom-color: var(--accent); }
+  .agency-btn.vfd.active   { color: #60c0ff; border-bottom-color: #60c0ff; background: rgba(96,192,255,0.05); }
+  .agency-btn.efd.active   { color: var(--amber); border-bottom-color: var(--amber); background: rgba(255,187,0,0.05); }
+  .agency-btn.nvfd.active  { color: #80ff80; border-bottom-color: #80ff80; background: rgba(128,255,128,0.05); }
+  .agency-btn.other.active { color: #c080ff; border-bottom-color: #c080ff; background: rgba(192,128,255,0.05); }
+
+  /* ===== MAP ===== */
+  .map-section { border-bottom: 1px solid var(--border2); position: relative; z-index: 1; }
+
+  .map-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px; background: rgba(0,10,20,0.9); border-bottom: 1px solid var(--border);
+  }
+
+  .map-title {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; letter-spacing: 4px; color: var(--accent2); text-transform: uppercase;
+  }
+
+  .map-legend { display: flex; gap: 16px; align-items: center; }
+
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+  }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  #map { height: 320px; width: 100%; background: #020810; z-index: 1; }
+
+  .leaflet-tile-pane { filter: brightness(0.7) saturate(0.5) hue-rotate(190deg); }
+  .leaflet-control-zoom { border: 1px solid var(--border2) !important; border-radius: 0 !important; }
+  .leaflet-control-zoom a { background: #0a1828 !important; color: var(--accent) !important; border-color: var(--border2) !important; border-radius: 0 !important; }
+  .leaflet-popup-content-wrapper { background: rgba(10,25,45,0.98) !important; border: 1px solid var(--border2) !important; border-radius: 0 !important; color: var(--text) !important; box-shadow: 0 4px 30px rgba(0,0,0,0.6) !important; }
+  .leaflet-popup-tip { background: #0a1828 !important; }
+  .leaflet-popup-content { font-family: 'Barlow Condensed', sans-serif !important; font-size: 15px !important; margin: 12px 16px !important; line-height: 1.5 !important; }
+  .popup-type { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--text2); margin-bottom:5px; letter-spacing:2px; text-transform:uppercase; }
+  .popup-addr { color:var(--muted); font-size:13px; font-family:'Share Tech Mono',monospace; }
+  .popup-time { color:var(--accent); font-size:11px; font-family:'Share Tech Mono',monospace; margin-top:6px; letter-spacing:1px; }
+
+  /* ===== TYPE FILTER TABS ===== */
+  .filter-bar {
+    display: flex; background: var(--surface); border-bottom: 1px solid var(--border2);
+    overflow-x: auto; scrollbar-width: none; position: relative; z-index: 1;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex: 1; min-width: 70px; padding: 12px 4px;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: 'Inter', sans-serif; font-weight: 400;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+
+  .tab.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+    text-shadow: 0 0 8px rgba(0,212,255,0.4);
+  }
+
+  /* ===== SIDE BY SIDE LAYOUT ===== */
+  /* Body is a vertical flex container so top bars take natural height
+     and main-layout gets all remaining space */
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main-layout {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  /* Left: map column */
+  .map-col {
+    width: 42%;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border2);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .map-col .map-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-bottom: none;
+    overflow: hidden;
+  }
+
+  .map-col #map {
+    flex: 1;
+    height: auto !important;
+    min-height: 0;
+  }
+
+  /* Right: incident list column */
+  .list-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .filter-bar { flex-shrink: 0; }
+  #status-bar { flex-shrink: 0; }
+  .list-footer { flex-shrink: 0; }
+
+  #incident-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    html, body { overflow: auto; }
+
+    body { display: block; }
+
+    .main-layout {
+      flex-direction: column;
+      height: auto;
+      overflow: visible;
+    }
+
+    .map-col {
+      width: 100%;
+      height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border2);
+      overflow: visible;
+    }
+
+    .map-col #map { height: 260px !important; }
+
+    .list-col { overflow: visible; height: auto; }
+
+    #incident-list { overflow: visible; flex: none; }
+  }
+    font-family: 'Share Tech Mono', monospace; font-size: 11px;
+    letter-spacing: 2px; padding: 7px 18px; text-align: center;
+    display: none; position: relative; z-index: 1;
+  }
+  #status-bar.warn  { display:block; background:rgba(255,170,0,0.06); border-bottom:1px solid rgba(255,170,0,0.2); color:var(--amber); }
+  #status-bar.error { display:block; background:rgba(255,58,58,0.06); border-bottom:1px solid rgba(255,58,58,0.2); color:var(--red); }
+  #status-bar.good  { display:block; background:rgba(0,255,136,0.04); border-bottom:1px solid rgba(0,255,136,0.15); color:var(--green); }
+
+  /* ===== INCIDENT LIST ===== */
+  #incident-list { padding-bottom: 40px; position: relative; z-index: 1; }
+
+  .state-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 200px; gap: 14px;
+    color: var(--muted); font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 3px;
+  }
+
+  .spinner {
+    width: 28px; height: 28px; border: 1px solid var(--border2);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+  }
+
+  .inc-card {
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 16px 20px; border-bottom: 1px solid rgba(26,53,80,0.6);
+    border-left: 3px solid transparent; transition: all 0.15s;
+    animation: fadein 0.3s ease; cursor: pointer; position: relative;
+  }
+
+  @keyframes fadein { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:none; } }
+
+  .inc-card:active { background: rgba(0,212,255,0.03); }
+  .inc-card.is-today { border-left-color: var(--red); background: rgba(255,58,58,0.04); }
+  .inc-card.is-older { opacity: 0.7; }
+  .inc-card.highlighted { background: rgba(0,212,255,0.05) !important; border-left-color: var(--accent) !important; opacity: 1 !important; }
+
+  /* Agency color left border overrides */
+  .inc-card.agency-npfd.is-today { border-left-color: #ff6060; }
+  .inc-card.agency-vfd.is-today  { border-left-color: #60c0ff; }
+  .inc-card.agency-efd.is-today  { border-left-color: var(--amber); }
+  .inc-card.agency-nvfd.is-today { border-left-color: #80ff80; }
+
+  .inc-icon {
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0; border: 1px solid; position: relative;
+  }
+
+  .inc-icon::before, .inc-icon::after {
+    content: ''; position: absolute;
+    width: 8px; height: 8px; border-color: inherit; border-style: solid; opacity: 0.4;
+  }
+  .inc-icon::before { top:-1px; left:-1px; border-width:1px 0 0 1px; }
+  .inc-icon::after  { bottom:-1px; right:-1px; border-width:0 1px 1px 0; }
+
+  .icon-fire    { background:rgba(255,100,0,0.08);  border-color:rgba(255,100,0,0.4); }
+  .icon-marine  { background:rgba(0,160,255,0.1);  border-color:rgba(0,160,255,0.35); }
+  .icon-traffic { background:rgba(0,180,255,0.06);  border-color:rgba(0,180,255,0.3); }
+  .icon-alarm   { background:rgba(255,187,0,0.06);  border-color:rgba(255,187,0,0.3); }
+  .icon-other   { background:rgba(60,100,140,0.06); border-color:rgba(60,100,140,0.3); }
+
+  .inc-body { flex: 1; min-width: 0; }
+
+  .inc-type {
+    font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 600;
+    color: var(--text2); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; letter-spacing: 1px;
+  }
+
+  .inc-addr {
+    font-family: 'Inter', sans-serif; font-weight: 400;
+    font-size: 14px; color: var(--text); margin-top: 5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .inc-addr.no-addr { color: var(--muted); font-style: italic; font-size: 13px; }
+
+  .inc-case {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; color: var(--muted); margin-top: 6px; letter-spacing: 0.5px;
+  }
+
+  /* Agency tag */
+  .agency-tag {
+    display: inline-block; font-family: 'Inter', sans-serif; font-weight: 500;
+    font-size: 10px; letter-spacing: 1.5px; padding: 2px 7px;
+    border: 1px solid var(--border); color: var(--muted);
+    margin-right: 6px; vertical-align: middle; text-transform: uppercase;
+  }
+  .agency-tag.npfd { border-color:rgba(255,96,96,0.4); color:#ff6060; }
+  .agency-tag.scfd { border-color:rgba(0,212,255,0.3); color:var(--accent2); }
+  .agency-tag.vfd  { border-color:rgba(96,192,255,0.3); color:#60c0ff; }
+  .agency-tag.efd  { border-color:rgba(255,187,0,0.3); color:var(--amber); }
+  .agency-tag.nvfd { border-color:rgba(128,255,128,0.3); color:#80ff80; }
+  .agency-tag.other { border-color:rgba(192,128,255,0.3); color:#c080ff; }
+
+  .inc-meta { text-align: right; flex-shrink: 0; }
+
+  .inc-time {
+    font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 600;
+    color: var(--accent); letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(0,212,255,0.4);
+  }
+
+  .inc-date {
+    font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; color: var(--muted); margin-top: 3px; letter-spacing: 1px;
+  }
+
+  .status-badge {
+    display: inline-block; font-family: 'Inter', sans-serif; font-weight: 500;
+    font-size: 9px; letter-spacing: 2px; padding: 3px 7px;
+    margin-top: 5px; text-transform: uppercase;
+  }
+  .badge-today { background:rgba(255,58,58,0.12); color:var(--red); border:1px solid rgba(255,58,58,0.3); text-shadow:0 0 6px rgba(255,58,58,0.5); }
+  .badge-older { background:rgba(30,50,80,0.3); color:var(--muted); border:1px solid var(--border); }
+
+  #last-updated {
+    text-align: center; font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 12px; color: var(--muted); letter-spacing: 2px; padding: 16px;
+    position: relative; z-index: 1; text-transform: uppercase;
+  }
+
+  .source-note {
+    text-align: center; font-family: 'Inter', sans-serif; font-weight: 300;
+    font-size: 11px; color: var(--dim); letter-spacing: 1px;
+    padding: 0 14px 24px; position: relative; z-index: 1;
+  }
+  .source-note a { color: var(--accent2); text-decoration: none; }
 </style>
 </head>
 <body>
-<div id="loading"><div class="spin">🔥</div><div style="color:var(--text2);font-size:.85rem;letter-spacing:.1em">LOADING...</div></div>
+<div class="vignette"></div>
+
+<!-- TOP BARS: full width -->
 <header>
-  <div class="hdr"><div class="fi">🔥</div><div class="ht"><h1>Long Island Fire Tracker</h1></div></div>
-  <div class="hdr-right">
-    <div class="county-sw">
-      <button id="btn-nassau" class="active" onclick="switchCounty('nassau',this)">Nassau</button>
-      <button id="btn-suffolk" class="soon" onclick="switchCounty('suffolk',this)">Suffolk</button>
+  <div class="header-row1">
+    <div class="brand">
+      <div class="brand-shield">&#x1F6A8;</div>
+      <div>
+        <div class="brand-text">SARASOTA CO. CAD</div>
+        <div class="brand-sub">911 DISPATCH // LIVE FEED</div>
+      </div>
     </div>
-    <div id="lu"></div>
+  </div>
+  <div class="header-row2">
+    <div class="live-pill"><div class="live-dot"></div>ONLINE</div>
+    <div id="clock">--:--:--</div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadIncidents()">&#x21BB;</button>
   </div>
 </header>
-<nav>
-  <button class="active" onclick="showTab('overview',this)">📊 Overview</button>
-  <button onclick="showTab('trends',this)">📈 Trends</button>
-  <button onclick="showTab('battalions',this)">🚒 Battalions</button>
-  <button onclick="showTab('heatmap',this)">🌡️ Heatmap</button>
-  <button onclick="showTab('departments',this)">🏠 Departments</button>
-  <button onclick="showTab('inprogress',this)">⚡ In Progress</button>
-  <button onclick="showTab('records',this)">🏆 Records</button>
-  <button onclick="showTab('compare',this)">⚖️ Compare</button>
-  <button onclick="showTab('update',this)">🔒 Update Data</button>
-</nav>
-<main>
-<div id="tab-overview" class="tab active">
-  <div id="sc-overview" class="sg"></div>
-  <div class="cg t">
-    <div class="cc"><div class="ct"><span class="d"></span>Annual Totals</div><div class="ch-wrap"><canvas id="ch-annual"></canvas></div></div>
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--blue)"></span>Battalion Share</div><div class="ch-wrap"><canvas id="ch-pie"></canvas></div></div>
-  </div>
-  <div class="cg">
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--yellow)"></span>Average Monthly Pattern</div><div class="ch-wrap"><canvas id="ch-mavg"></canvas></div></div>
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--green)"></span>Stacked by Battalion</div><div class="ch-wrap"><canvas id="ch-stack"></canvas></div></div>
-  </div>
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-num red"   id="s-today">--</div><div class="stat-label">Today</div></div>
+  <div class="stat"><div class="stat-num amber"  id="s-fire">--</div><div class="stat-label">Fire</div></div>
+  <div class="stat"><div class="stat-num"        id="s-traffic">--</div><div class="stat-label">Traffic</div></div>
+  <div class="stat"><div class="stat-num green"  id="s-total">--</div><div class="stat-label">Total</div></div>
 </div>
-<div id="tab-trends" class="tab">
-  <div class="sh">Year-Over-Year Analysis</div>
-  <div class="cc" style="margin-bottom:14px"><div class="ct"><span class="d"></span>Annual Totals with Rolling Avg (up to 3-Year)</div><div class="ch-wrap"><canvas id="ch-trend"></canvas></div></div>
-  <div class="cg">
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--blue)"></span>YoY Change</div><div class="ch-wrap"><canvas id="ch-yoy"></canvas></div></div>
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--yellow)"></span>Battalion Trends</div><div class="ch-wrap"><canvas id="ch-btrd"></canvas></div></div>
-  </div>
-  <div class="sh">Summary Table</div>
-  <div class="tw"><table id="tbl-trend"></table></div>
+
+<div class="agency-bar" id="agency-bar">
+  <button class="agency-btn active" onclick="setAgency('all',this)">All</button>
+  <button class="agency-btn npfd"  onclick="setAgency('npfd',this)">N. Port</button>
+  <button class="agency-btn scfd"  onclick="setAgency('scfd',this)">SCFD</button>
+  <button class="agency-btn vfd"   onclick="setAgency('vfd',this)">Venice</button>
+  <button class="agency-btn efd"   onclick="setAgency('efd',this)">Englewood</button>
+  <button class="agency-btn nvfd"  onclick="setAgency('nvfd',this)">Nokomis</button>
+  <button class="agency-btn other" onclick="setAgency('other',this)">Other</button>
 </div>
-<div id="tab-battalions" class="tab">
-  <div class="sh">Filter by Year</div>
-  <div class="yp" id="bat-pills"></div>
-  <div class="cg">
-    <div class="cc"><div class="ct"><span class="d"></span>Battalion Totals — <span id="bat-yr-lbl">All Years</span></div><div class="ch-wrap"><canvas id="ch-batbar"></canvas></div></div>
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--yellow)"></span>Monthly by Battalion</div><div class="ch-wrap"><canvas id="ch-batmo"></canvas></div></div>
-  </div>
-  <div class="sh">Battalion Summary</div>
-  <div class="tw"><table id="tbl-bat"></table></div>
-</div>
-<div id="tab-heatmap" class="tab">
-  <div class="sh">Monthly Heatmap</div>
-  <div class="tw"><table id="tbl-heat"></table></div>
-  <div class="sh">Battalion Heatmap</div>
-  <div class="ctrl"><label>Battalion:</label><select id="heat-bat" onchange="renderBatHeat()"></select></div>
-  <div class="tw"><table id="tbl-batheat"></table></div>
-</div>
-<div id="tab-departments" class="tab">
-  <div class="ctrl">
-    <label>Battalion:</label><select id="dept-bat" onchange="renderDepts()"><option value="all">All Battalions</option></select>
-    <label>Sort:</label>
-    <select id="dept-sort" onchange="renderDepts()">
-      <option value="total">All-Time Total</option><option value="avg">Avg/Year</option>
-      <option value="name">Name</option>
-    </select>
-    <input id="dept-search" placeholder="Search..." oninput="renderDepts()" style="min-width:140px">
-  </div>
-  <div class="tw"><table id="tbl-dept"></table></div>
-</div>
-<div id="tab-inprogress" class="tab">
-  <div class="pb"><div style="font-size:1.3rem">📡</div><div><strong>Live Year Tracking with Projection</strong><p>Solid = actual · Yellow = projected from historical averages</p></div></div>
-  <div class="yp" id="ip-pills"></div>
-  <div id="sc-ip" class="sg"></div>
-  <div class="cg">
-    <div class="cc"><div class="ct"><span class="d"></span>Actual vs Projected — <span id="ip-yr-lbl">2026</span></div><div class="ch-wrap"><canvas id="ch-ip-mo"></canvas></div></div>
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--blue)"></span>vs Historical Min/Avg/Max</div><div class="ch-wrap"><canvas id="ch-ip-rng"></canvas></div></div>
-  </div>
-  <div class="cc" style="margin-bottom:14px"><div class="ct"><span class="d" style="background:var(--yellow)"></span>Projected Year-End vs Historical</div><div class="ch-wrap"><canvas id="ch-ip-proj"></canvas></div></div>
-  <div class="sh">Department Breakdown</div>
-  <div class="ctrl"><label>Battalion:</label><select id="ip-bat" onchange="renderIPTable()"><option value="all">All Battalions</option></select></div>
-  <div class="tw"><table id="tbl-ip"></table></div>
-</div>
-<div id="tab-records" class="tab">
-  <div class="sh">County Records</div><div class="rec-grid" id="rec-county"></div>
-  <div class="sh">Department Records</div><div class="rec-grid" id="rec-dept"></div>
-  <div class="sh">Monthly Records</div><div class="rec-grid" id="rec-monthly"></div>
-  <div class="sh">Zero-Fire Years by Department</div>
-  <div class="tw"><table id="tbl-zeros"></table></div>
-</div>
-<div id="tab-compare" class="tab">
-  <div class="sh">Year-to-Year Comparison</div>
-  <div class="ctrl">
-    <label>Year A:</label><select id="cmp-a"></select>
-    <label>Year B:</label><select id="cmp-b"></select>
-    <button class="btn" onclick="runCompare()">Compare</button>
-  </div>
-  <div id="cmp-stats" class="sg" style="margin-bottom:18px"></div>
-  <div class="cg">
-    <div class="cc"><div class="ct"><span class="d"></span>Monthly</div><div class="ch-wrap"><canvas id="ch-cmp-mo"></canvas></div></div>
-    <div class="cc"><div class="ct"><span class="d" style="background:var(--blue)"></span>By Battalion</div><div class="ch-wrap"><canvas id="ch-cmp-bat"></canvas></div></div>
-  </div>
-  <div class="sh">Department Diff</div>
-  <div class="ctrl"><label>Battalion:</label><select id="cmp-bat-filter" onchange="renderCmpTable()"><option value="all">All</option></select></div>
-  <div class="tw"><table id="tbl-cmp"></table></div>
-</div>
-<div id="tab-update" class="tab">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-    <h2 style="font-size:1rem;color:var(--accent)">🔒 Update Data</h2>
-    <button class="btn o sm" onclick="showTab('overview',document.querySelectorAll('nav button')[0])">← Dashboard</button>
-  </div>
-  <div class="uc">
-    <h3 style="font-size:.88rem;margin-bottom:8px">How to Update</h3>
-    <p style="font-size:.8rem;color:var(--text2);line-height:1.7">Edit <code style="background:var(--surface2);padding:2px 5px;border-radius:3px">fires.json</code> on GitHub. Find the department, update the 12-number monthly array, commit.</p>
-    <ol style="font-size:.8rem;color:var(--text2);line-height:2.2;margin:10px 0 0 18px">
-      <li>GitHub repo → <code style="background:var(--surface2);padding:2px 5px;border-radius:3px">fires.json</code> → ✏️ Edit</li>
-      <li>Ctrl+F → search dept name (e.g. <code style="background:var(--surface2);padding:2px 5px;border-radius:3px">720 Hempstead</code>)</li>
-      <li>Update the array — Jan first, Dec last</li>
-      <li>Commit — site updates in ~60 seconds</li>
-    </ol>
-  </div>
-  <div class="uc">
-    <h3 style="font-size:.88rem;margin-bottom:6px">Quick Entry Tool</h3>
-    <div class="ctrl"><label>Year:</label><select id="ue-yr"></select><label>Department:</label><select id="ue-dept"></select></div>
-    <div id="ue-cur" style="font-size:.76rem;color:var(--text2);margin:7px 0;padding:7px;background:var(--surface2);border-radius:4px"></div>
-    <div class="ugr" id="ue-grid"></div>
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="genJSON()">Generate</button>
-      <button class="btn o" onclick="copyJSON()">Copy</button>
+
+<!-- SIDE BY SIDE: map left, list right -->
+<div class="main-layout">
+
+  <!-- LEFT: Map column -->
+  <div class="map-col">
+    <div class="map-section">
+      <div class="map-header">
+        <div class="map-title">Sarasota County, FL</div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#ff3a3a;box-shadow:0 0 4px #ff3a3a"></div>TODAY</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#2a4a66"></div>PRIOR</div>
+        </div>
+      </div>
+      <div id="map"></div>
     </div>
-    <div id="ue-out" style="margin-top:10px;background:var(--surface2);border-radius:5px;padding:10px;font-family:monospace;font-size:.76rem;display:none;white-space:pre;overflow-x:auto;border:1px solid var(--border)"></div>
   </div>
+
+  <!-- RIGHT: Incident list column -->
+  <div class="list-col">
+    <div class="filter-bar">
+      <button class="tab active" onclick="setFilter('all',this)">All</button>
+      <button class="tab" onclick="setFilter('today',this)">Today</button>
+      <button class="tab" onclick="setFilter('fire',this)">Fire</button>
+      <button class="tab" onclick="setFilter('marine',this)">Marine</button>
+      <button class="tab" onclick="setFilter('traffic',this)">Traffic</button>
+      <button class="tab" onclick="setFilter('alarm',this)">Alarms</button>
+    </div>
+
+    <div id="status-bar"></div>
+    <div id="incident-list">
+      <div class="state-screen"><div class="spinner"></div><span>ACQUIRING FEED...</span></div>
+    </div>
+    <div class="list-footer">
+      <div id="last-updated"></div>
+      <div class="source-note">SRC: <a href="https://dispatchreporting.scgov.net" target="_blank">dispatchreporting.scgov.net</a></div>
+    </div>
+  </div>
+
 </div>
-</main>
-<footer>Long Island Fire Tracker · Robert Leone</footer>
-<script>window.__FIRE_DATA__={"metadata":{"last_updated":"2025-12-31","years_complete":[2016,2017,2018,2019,2020,2021,2022,2023,2024,2025],"years_in_progress":[2026]},"counties":{"nassau":{"name":"Nassau County","departments":[{"name":"100 Bellerose","battalion":"Battalion 1"},{"name":"110 Bellerose Terrace","battalion":"Battalion 1"},{"name":"120 Floral Park","battalion":"Battalion 1"},{"name":"130 Floral Park Centre","battalion":"Battalion 1"},{"name":"140 Garden City","battalion":"Battalion 1"},{"name":"150 Garden City Park","battalion":"Battalion 1"},{"name":"160 Mineola","battalion":"Battalion 1"},{"name":"170 New Hyde Park","battalion":"Battalion 1"},{"name":"180 South Floral Park","battalion":"Battalion 1"},{"name":"190 Stewart Manor","battalion":"Battalion 1"},{"name":"200 Baldwin","battalion":"Battalion 2"},{"name":"210 Freeport","battalion":"Battalion 2"},{"name":"220 Island Park","battalion":"Battalion 2"},{"name":"230 Long Beach","battalion":"Battalion 2"},{"name":"240 Oceanside","battalion":"Battalion 2"},{"name":"250 Point Lookout-Lido","battalion":"Battalion 2"},{"name":"300 Hewlett","battalion":"Battalion 3"},{"name":"310 Inwood","battalion":"Battalion 3"},{"name":"320 Lawrence-Cedarhurst","battalion":"Battalion 3"},{"name":"330 Meadowmere Park","battalion":"Battalion 3"},{"name":"340 Valley Stream","battalion":"Battalion 3"},{"name":"350 Woodmere","battalion":"Battalion 3"},{"name":"400 East Rockaway","battalion":"Battalion 4"},{"name":"410 Lakeview","battalion":"Battalion 4"},{"name":"420 Lynbrook","battalion":"Battalion 4"},{"name":"430 Malverne","battalion":"Battalion 4"},{"name":"440 Rockville Centre","battalion":"Battalion 4"},{"name":"500 Bayville","battalion":"Battalion 5"},{"name":"510 East Norwich","battalion":"Battalion 5"},{"name":"520 Glen Cove","battalion":"Battalion 5"},{"name":"530 Glenwood","battalion":"Battalion 5"},{"name":"540 Locust Valley","battalion":"Battalion 5"},{"name":"550 Oyster Bay/Atlantic Steamer","battalion":"Battalion 5"},{"name":"560 Roslyn Rescue/590 Roslyn Highlands","battalion":"Battalion 5"},{"name":"570 Sea Cliff","battalion":"Battalion 5"},{"name":"580 Syosset","battalion":"Battalion 5"},{"name":"600 Bellmore","battalion":"Battalion 6"},{"name":"610 East Meadow","battalion":"Battalion 6"},{"name":"620 Levittown","battalion":"Battalion 6"},{"name":"630 Massapequa","battalion":"Battalion 6"},{"name":"640 Merrick","battalion":"Battalion 6"},{"name":"650 North Bellmore","battalion":"Battalion 6"},{"name":"660 North Massapequa","battalion":"Battalion 6"},{"name":"670 North Merrick","battalion":"Battalion 6"},{"name":"680 Seaford","battalion":"Battalion 6"},{"name":"690 Wantagh","battalion":"Battalion 6"},{"name":"700 Elmont","battalion":"Battalion 7"},{"name":"710 Franklin Square & Munson","battalion":"Battalion 7"},{"name":"720 Hempstead","battalion":"Battalion 7"},{"name":"730 Roosevelt","battalion":"Battalion 7"},{"name":"740 South Hempstead","battalion":"Battalion 7"},{"name":"750 Uniondale","battalion":"Battalion 7"},{"name":"760 West Hempstead","battalion":"Battalion 7"},{"name":"800 Albertson","battalion":"Battalion 8"},{"name":"810 East Williston","battalion":"Battalion 8"},{"name":"820 Great Neck Alert","battalion":"Battalion 8"},{"name":"830 Great Neck Vigilant","battalion":"Battalion 8"},{"name":"840 Plandome","battalion":"Battalion 8"},{"name":"850 Port Washington","battalion":"Battalion 8"},{"name":"860 Williston Park","battalion":"Battalion 8"},{"name":"870 Manhasset-Lakeville","battalion":"Battalion 8"},{"name":"900 Bethpage","battalion":"Battalion 9"},{"name":"910 Carle Place","battalion":"Battalion 9"},{"name":"920 Farmingdale","battalion":"Battalion 9"},{"name":"930 Hicksville","battalion":"Battalion 9"},{"name":"940 Jericho","battalion":"Battalion 9"},{"name":"950 Plainview","battalion":"Battalion 9"},{"name":"960 Westbury","battalion":"Battalion 9"},{"name":"970 South Farmingdale","battalion":"Battalion 9"}],"years":{"2016":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[1,0,0,0,0,0,0,0,0,0,2,1],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,0,1,0,1,0,0,1,1],"150 Garden City Park":[0,2,0,1,0,0,0,0,0,0,0,0],"160 Mineola":[1,0,2,0,0,1,1,0,0,0,0,0],"170 New Hyde Park":[1,0,0,2,1,0,1,0,0,0,1,1],"180 South Floral Park":[0,0,1,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[2,0,0,0,0,1,0,1,0,0,0,0],"210 Freeport":[1,0,0,1,0,1,4,1,2,1,0,3],"220 Island Park":[0,0,0,1,0,0,0,0,0,0,0,0],"230 Long Beach":[2,0,1,0,0,1,1,2,0,2,0,1],"240 Oceanside":[1,0,1,2,1,0,0,0,0,0,0,0],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,1,0,0],"300 Hewlett":[0,1,0,0,1,0,0,0,0,0,0,0],"310 Inwood":[0,0,0,0,1,0,0,0,0,0,0,0],"320 Lawrence-Cedarhurst":[1,0,0,1,0,0,0,1,0,0,1,3],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[0,0,1,0,2,1,1,0,0,0,2,2],"350 Woodmere":[1,1,0,1,0,0,1,0,0,0,0,0],"400 East Rockaway":[0,0,0,1,0,0,1,0,0,0,0,0],"410 Lakeview":[0,0,1,0,0,0,0,0,1,0,0,0],"420 Lynbrook":[0,1,0,0,0,0,0,0,1,3,0,1],"430 Malverne":[0,2,0,0,0,0,0,0,0,0,0,0],"440 Rockville Centre":[0,0,0,0,0,0,0,0,0,1,0,0],"500 Bayville":[0,0,0,0,0,0,0,1,0,0,0,1],"510 East Norwich":[0,0,0,0,1,0,0,0,0,0,0,0],"520 Glen Cove":[0,1,1,0,0,0,1,0,0,0,0,0],"530 Glenwood":[1,0,0,0,0,0,0,0,0,0,0,0],"540 Locust Valley":[0,0,0,2,0,1,1,0,1,0,1,0],"550 Oyster Bay/Atlantic Steamer":[0,0,0,0,0,0,0,0,0,1,0,0],"560 Roslyn Rescue/590 Roslyn Highlands":[0,0,0,0,1,0,1,1,0,0,0,0],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,0],"580 Syosset":[0,0,0,1,1,0,1,0,0,1,1,1],"600 Bellmore":[0,0,0,0,1,0,1,0,0,0,0,1],"610 East Meadow":[0,0,0,1,0,0,0,0,0,0,1,0],"620 Levittown":[0,0,0,0,0,0,0,0,0,0,1,0],"630 Massapequa":[1,1,1,1,0,1,1,0,1,0,0,1],"640 Merrick":[0,0,0,0,0,2,0,0,0,0,1,0],"650 North Bellmore":[0,0,0,1,0,0,1,0,0,1,1,0],"660 North Massapequa":[1,1,0,0,0,0,1,1,0,0,0,0],"670 North Merrick":[0,0,0,0,0,1,0,1,0,0,0,0],"680 Seaford":[0,0,0,0,0,0,0,0,0,0,0,0],"690 Wantagh":[1,0,1,1,1,1,0,0,1,1,0,0],"700 Elmont":[2,1,1,3,0,2,2,1,0,0,1,2],"710 Franklin Square & Munson":[0,2,2,0,0,1,0,0,0,1,0,0],"720 Hempstead":[0,1,1,2,2,2,2,3,1,0,2,4],"730 Roosevelt":[0,0,2,0,0,1,0,0,0,0,0,0],"740 South Hempstead":[0,0,0,0,0,0,0,0,0,0,1,0],"750 Uniondale":[0,0,0,1,2,1,0,0,0,0,1,0],"760 West Hempstead":[2,0,0,1,0,0,0,0,0,0,0,1],"800 Albertson":[0,1,0,0,0,0,0,0,0,0,0,0],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,1,0,0,0,0,0,0,0,0,1],"830 Great Neck Vigilant":[0,0,0,0,1,0,0,0,0,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[0,0,0,0,0,1,0,1,0,1,1,1],"860 Williston Park":[0,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,1,1,1,1,0,0,1,0,0,1,1],"900 Bethpage":[0,0,0,0,0,0,0,0,0,0,0,0],"910 Carle Place":[1,0,0,0,0,0,1,0,0,0,0,0],"920 Farmingdale":[0,0,0,0,0,0,0,0,0,0,0,0],"930 Hicksville":[0,0,2,0,0,0,0,2,1,1,1,0],"940 Jericho":[1,0,0,0,1,0,0,1,0,0,0,0],"950 Plainview":[0,0,0,0,1,0,0,0,0,0,0,1],"960 Westbury":[0,1,3,1,1,2,0,1,2,1,0,1],"970 South Farmingdale":[0,0,0,0,0,0,0,0,0,0,0,0]},"2017":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[1,0,0,0,0,0,0,0,0,0,0,0],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[1,1,0,0,0,0,0,1,0,1,0,0],"150 Garden City Park":[0,0,0,0,0,0,0,1,0,0,0,0],"160 Mineola":[0,0,3,1,1,0,0,0,0,2,0,0],"170 New Hyde Park":[1,0,0,0,0,0,1,0,0,0,0,0],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[1,0,2,0,0,1,1,0,1,0,0,0],"210 Freeport":[2,2,3,2,3,0,1,1,0,3,0,4],"220 Island Park":[0,1,0,0,1,0,0,0,0,0,1,0],"230 Long Beach":[0,0,3,1,0,1,0,0,1,1,1,0],"240 Oceanside":[1,0,0,0,0,0,0,0,0,0,1,0],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,0],"300 Hewlett":[0,0,0,0,0,0,0,0,1,0,0,0],"310 Inwood":[1,0,0,0,0,0,0,0,0,0,0,0],"320 Lawrence-Cedarhurst":[0,0,0,0,0,0,0,1,0,0,0,0],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[1,4,1,0,1,0,0,2,1,0,1,0],"350 Woodmere":[0,0,0,0,0,0,0,0,0,0,0,0],"400 East Rockaway":[0,0,2,0,0,0,0,1,0,1,1,0],"410 Lakeview":[0,0,1,0,0,0,1,0,0,0,0,0],"420 Lynbrook":[0,1,1,1,0,0,0,0,0,0,0,1],"430 Malverne":[0,0,2,0,0,0,0,0,0,0,0,1],"440 Rockville Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"500 Bayville":[0,0,0,0,1,0,0,0,0,0,0,1],"510 East Norwich":[0,0,0,0,0,0,0,1,0,0,0,0],"520 Glen Cove":[5,0,0,0,0,0,0,0,2,1,0,0],"530 Glenwood":[0,0,0,1,0,0,0,0,0,0,0,0],"540 Locust Valley":[0,1,0,0,0,1,0,0,0,0,0,0],"550 Oyster Bay/Atlantic Steamer":[0,0,0,0,0,0,1,0,0,0,0,0],"560 Roslyn Rescue/590 Roslyn Highlands":[1,0,1,0,0,0,0,0,0,3,1,0],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,0],"580 Syosset":[1,0,0,1,0,2,1,0,2,1,0,0],"600 Bellmore":[0,0,0,0,1,0,0,0,0,0,0,0],"610 East Meadow":[0,0,2,0,1,0,0,0,0,0,0,1],"620 Levittown":[1,1,1,1,1,0,0,0,0,0,0,0],"630 Massapequa":[1,0,0,0,0,1,0,0,1,0,1,3],"640 Merrick":[0,0,1,0,1,1,0,0,1,0,0,0],"650 North Bellmore":[0,0,0,0,0,1,1,0,0,1,0,0],"660 North Massapequa":[0,0,0,0,1,0,0,0,1,1,0,0],"670 North Merrick":[0,0,0,0,1,0,0,0,0,0,0,0],"680 Seaford":[0,0,0,0,0,0,0,0,0,0,0,0],"690 Wantagh":[1,2,2,2,1,1,0,0,0,0,0,0],"700 Elmont":[0,4,2,2,0,1,0,1,0,1,2,1],"710 Franklin Square & Munson":[2,0,0,0,0,0,0,0,0,0,0,0],"720 Hempstead":[2,1,1,1,0,0,2,2,1,1,3,3],"730 Roosevelt":[0,0,1,1,2,0,1,0,0,0,0,1],"740 South Hempstead":[0,0,0,1,0,0,0,0,0,0,0,0],"750 Uniondale":[1,0,0,0,0,2,1,0,0,0,0,0],"760 West Hempstead":[1,0,0,0,0,0,0,1,0,0,0,0],"800 Albertson":[0,0,0,0,0,0,0,0,0,0,0,0],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,0,0,0,0,0,0,0,0,1,1],"830 Great Neck Vigilant":[0,0,1,0,0,2,0,0,0,0,0,0],"840 Plandome":[1,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[1,1,0,0,3,0,1,0,0,1,1,2],"860 Williston Park":[0,0,0,0,0,1,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,1,0,0,0,0,0,0,0,0,0],"900 Bethpage":[0,1,0,1,0,0,1,1,1,0,0,0],"910 Carle Place":[0,0,0,1,0,0,0,0,0,0,0,0],"920 Farmingdale":[0,0,0,0,0,0,0,0,0,0,0,0],"930 Hicksville":[1,0,0,2,0,1,0,0,1,0,1,0],"940 Jericho":[0,0,0,0,0,0,0,0,0,0,0,0],"950 Plainview":[1,0,0,0,0,1,0,0,0,0,0,0],"960 Westbury":[2,1,1,2,0,1,1,0,1,1,1,1],"970 South Farmingdale":[0,0,1,1,0,0,0,1,0,0,1,0]},"2018":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,0,0,0,0,0,0,0,0,0,1],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,0,0,0,0,0,0,1,0],"150 Garden City Park":[0,0,0,0,0,0,0,0,0,1,0,1],"160 Mineola":[3,0,1,0,0,1,0,0,0,0,1,0],"170 New Hyde Park":[0,0,0,0,0,0,0,1,0,0,0,1],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,1,0,0,0,0,1,0,0],"200 Baldwin":[0,0,0,0,1,0,0,0,1,0,1,0],"210 Freeport":[2,1,0,1,0,2,2,1,0,0,0,1],"220 Island Park":[1,0,0,0,0,0,0,1,0,0,0,1],"230 Long Beach":[2,1,1,1,1,0,0,0,0,0,1,0],"240 Oceanside":[0,1,0,0,0,0,0,0,0,0,0,0],"250 Point Lookout-Lido":[0,0,0,0,1,0,0,0,0,0,1,0],"300 Hewlett":[0,1,0,0,0,0,0,0,0,0,0,0],"310 Inwood":[1,0,0,0,0,0,0,0,0,0,0,0],"320 Lawrence-Cedarhurst":[0,1,1,1,0,1,0,1,0,1,1,0],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[2,1,0,3,2,2,0,0,0,1,2,1],"350 Woodmere":[0,1,0,0,0,0,0,1,0,0,0,0],"400 East Rockaway":[0,0,0,0,1,0,0,0,0,0,0,0],"410 Lakeview":[0,0,0,0,1,0,1,1,1,0,0,0],"420 Lynbrook":[0,1,1,0,1,0,0,0,0,1,0,1],"430 Malverne":[0,1,0,0,0,0,0,0,0,0,0,0],"440 Rockville Centre":[0,0,0,1,0,0,0,0,0,0,0,0],"500 Bayville":[1,0,0,0,0,0,0,0,0,0,1,0],"510 East Norwich":[0,0,0,0,0,0,0,0,1,0,0,0],"520 Glen Cove":[2,1,0,0,0,1,0,1,0,0,1,1],"530 Glenwood":[0,0,0,0,0,0,0,0,0,0,0,0],"540 Locust Valley":[0,0,0,2,0,0,0,1,0,0,0,1],"550 Oyster Bay/Atlantic Steamer":[0,0,0,0,0,2,0,0,1,0,0,2],"560 Roslyn Rescue/590 Roslyn Highlands":[0,0,0,0,0,0,0,1,0,0,0,0],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,0],"580 Syosset":[0,1,0,0,2,1,0,0,0,0,0,0],"600 Bellmore":[0,0,0,0,0,1,1,0,0,1,0,1],"610 East Meadow":[0,1,0,0,0,0,1,0,0,0,2,1],"620 Levittown":[0,0,0,0,0,0,0,1,0,0,0,1],"630 Massapequa":[2,0,0,2,0,0,1,0,0,1,4,2],"640 Merrick":[1,0,0,0,0,0,0,0,0,2,0,0],"650 North Bellmore":[1,0,1,0,0,0,0,0,0,0,0,0],"660 North Massapequa":[0,0,1,1,0,0,1,0,0,0,0,0],"670 North Merrick":[0,0,0,0,0,0,0,0,0,0,0,0],"680 Seaford":[0,0,1,0,0,0,0,0,0,0,0,0],"690 Wantagh":[1,1,1,2,1,0,0,1,0,2,0,2],"700 Elmont":[0,3,0,0,3,0,1,0,0,1,2,0],"710 Franklin Square & Munson":[0,0,1,2,0,1,3,1,0,0,0,2],"720 Hempstead":[3,4,0,2,2,1,1,3,1,2,5,5],"730 Roosevelt":[0,0,0,0,2,0,0,0,0,1,0,2],"740 South Hempstead":[0,0,0,0,0,0,0,1,0,0,0,0],"750 Uniondale":[0,0,2,0,0,0,3,1,0,1,0,1],"760 West Hempstead":[0,0,0,1,0,0,0,0,0,0,0,0],"800 Albertson":[0,0,0,0,0,0,0,0,0,0,0,1],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,1,0,1,1,1,0,0,1,0,0],"830 Great Neck Vigilant":[0,0,0,0,0,0,1,0,0,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[1,0,0,0,3,0,0,0,0,0,1,0],"860 Williston Park":[0,0,0,1,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,1,0,0,0,0,0,0,0,0,0],"900 Bethpage":[1,0,0,1,0,1,1,0,0,1,0,1],"910 Carle Place":[0,0,0,0,0,0,0,0,0,0,0,0],"920 Farmingdale":[2,1,0,0,0,0,0,1,0,0,0,0],"930 Hicksville":[0,1,1,2,1,0,2,1,2,1,0,0],"940 Jericho":[0,0,0,0,0,0,0,1,0,0,0,0],"950 Plainview":[1,0,0,0,0,0,1,0,0,0,2,0],"960 Westbury":[1,1,5,0,1,2,0,0,1,1,1,1],"970 South Farmingdale":[0,0,0,0,0,0,1,0,0,0,0,1]},"2019":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,0,0,0,0,0,0,0,0,0,1],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,1,0,0,0,0,1,0,0],"150 Garden City Park":[0,1,0,0,0,0,1,0,0,1,0,0],"160 Mineola":[0,0,0,0,0,0,0,0,1,0,0,1],"170 New Hyde Park":[0,1,1,0,0,0,0,0,0,0,0,0],"180 South Floral Park":[1,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[1,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[2,0,1,0,0,0,2,1,0,0,0,1],"210 Freeport":[1,1,3,0,1,2,1,1,0,2,0,2],"220 Island Park":[0,0,0,0,0,0,2,0,0,0,0,0],"230 Long Beach":[1,0,1,1,1,1,0,0,3,0,0,1],"240 Oceanside":[0,1,1,2,1,0,0,0,0,0,0,1],"250 Point Lookout-Lido":[1,1,0,0,1,0,0,0,0,0,0,0],"300 Hewlett":[0,0,0,1,1,1,0,0,2,0,0,0],"310 Inwood":[1,0,1,1,0,0,0,0,0,0,0,2],"320 Lawrence-Cedarhurst":[1,0,2,0,2,0,2,0,1,1,1,1],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[0,1,3,0,0,0,1,0,2,4,0,1],"350 Woodmere":[1,1,0,0,0,0,0,0,0,0,0,0],"400 East Rockaway":[0,0,0,0,0,0,0,2,0,0,0,0],"410 Lakeview":[1,0,1,0,0,0,0,0,0,1,0,1],"420 Lynbrook":[0,1,0,0,0,0,3,0,1,1,0,0],"430 Malverne":[0,0,1,0,0,0,0,0,0,0,0,0],"440 Rockville Centre":[0,1,0,0,1,0,2,0,0,0,0,1],"500 Bayville":[0,0,0,0,0,0,0,0,1,0,2,0],"510 East Norwich":[0,0,1,1,0,1,2,0,0,0,1,0],"520 Glen Cove":[1,0,2,1,2,0,1,0,0,1,1,0],"530 Glenwood":[0,0,0,0,0,1,1,0,0,0,0,0],"540 Locust Valley":[0,0,0,0,0,0,0,0,0,0,0,1],"550 Oyster Bay/Atlantic Steamer":[1,0,0,1,1,0,0,1,0,0,0,1],"560 Roslyn Rescue/590 Roslyn Highlands":[1,0,0,1,1,0,2,1,0,0,0,2],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,0],"580 Syosset":[0,0,1,1,0,0,1,0,1,0,1,1],"600 Bellmore":[0,0,1,0,0,0,0,0,0,0,0,1],"610 East Meadow":[0,1,0,0,0,0,0,0,0,0,0,0],"620 Levittown":[1,1,0,0,0,0,2,0,0,0,1,0],"630 Massapequa":[1,0,0,4,0,0,0,0,1,1,1,3],"640 Merrick":[1,1,0,1,0,0,1,0,0,1,0,0],"650 North Bellmore":[1,0,1,2,0,0,2,0,0,0,1,0],"660 North Massapequa":[0,0,0,2,0,1,1,0,0,0,0,1],"670 North Merrick":[0,0,0,0,0,0,0,0,1,0,0,0],"680 Seaford":[0,0,0,0,0,0,0,0,0,0,0,0],"690 Wantagh":[2,0,1,0,0,1,0,4,0,0,0,0],"700 Elmont":[3,2,0,0,0,0,1,0,1,0,1,0],"710 Franklin Square & Munson":[0,1,0,1,1,0,1,1,1,1,0,1],"720 Hempstead":[1,1,1,1,0,0,0,1,0,0,1,1],"730 Roosevelt":[2,1,0,1,0,0,0,1,0,1,0,0],"740 South Hempstead":[0,0,1,0,0,0,0,0,0,0,0,0],"750 Uniondale":[0,0,0,0,0,2,0,1,1,0,3,0],"760 West Hempstead":[0,2,0,0,0,0,0,0,0,0,3,0],"800 Albertson":[0,0,0,0,0,0,0,0,0,0,0,0],"810 East Williston":[1,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,0,0,0,0,0,0,0,0,0,1],"830 Great Neck Vigilant":[1,0,0,1,0,0,0,0,1,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[1,0,0,0,0,0,2,0,1,0,2,3],"860 Williston Park":[1,0,0,0,0,0,0,0,0,0,0,1],"870 Manhasset-Lakeville":[0,1,1,0,0,0,0,1,1,0,2,0],"900 Bethpage":[0,1,0,1,1,1,0,1,1,0,1,1],"910 Carle Place":[1,0,0,0,1,0,2,1,0,1,0,0],"920 Farmingdale":[0,0,0,0,0,0,1,0,0,0,0,0],"930 Hicksville":[0,0,1,3,1,1,2,0,0,0,0,0],"940 Jericho":[1,0,0,0,0,0,0,1,0,0,1,0],"950 Plainview":[0,0,0,0,1,0,1,0,0,1,1,0],"960 Westbury":[2,2,2,0,0,0,1,0,2,1,3,1],"970 South Farmingdale":[0,0,0,1,0,0,1,0,0,0,0,0]},"2020":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,1,0,0,0,0,0,1,0,2,0],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,0,0,0,0,1,0,0,1],"150 Garden City Park":[1,0,0,0,0,0,0,0,0,0,0,0],"160 Mineola":[1,0,2,0,0,0,0,1,0,0,1,0],"170 New Hyde Park":[0,0,0,0,1,0,0,0,0,0,0,1],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,1,0,0,0,0,0,0,1],"200 Baldwin":[1,1,0,0,0,2,0,0,1,0,1,1],"210 Freeport":[1,0,3,2,0,1,2,1,0,0,1,1],"220 Island Park":[1,0,0,1,1,0,0,0,1,0,0,0],"230 Long Beach":[0,2,1,0,1,0,0,0,0,0,1,1],"240 Oceanside":[0,0,0,0,0,0,0,0,0,0,0,0],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,0],"300 Hewlett":[0,0,0,0,1,0,0,0,0,0,0,1],"310 Inwood":[0,0,1,1,1,0,0,1,1,0,0,0],"320 Lawrence-Cedarhurst":[0,0,0,0,0,0,0,0,0,0,0,2],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,1,0],"340 Valley Stream":[0,1,1,3,0,1,0,1,0,3,1,0],"350 Woodmere":[0,0,0,0,0,0,0,0,0,0,0,0],"400 East Rockaway":[0,0,1,0,0,0,0,0,0,1,0,1],"410 Lakeview":[0,2,0,0,0,0,1,0,0,0,0,1],"420 Lynbrook":[0,0,0,0,0,0,1,0,0,0,0,0],"430 Malverne":[0,0,0,0,0,0,1,1,0,0,0,0],"440 Rockville Centre":[0,0,0,0,0,0,0,0,1,0,0,0],"500 Bayville":[0,0,0,0,0,0,0,0,0,0,0,0],"510 East Norwich":[0,0,0,0,0,0,0,0,0,0,0,0],"520 Glen Cove":[0,1,2,1,2,0,0,1,1,1,1,0],"530 Glenwood":[0,0,0,0,0,0,0,1,0,0,0,0],"540 Locust Valley":[0,0,0,0,0,0,0,1,0,0,0,1],"550 Oyster Bay/Atlantic Steamer":[0,2,0,0,0,0,0,0,1,0,0,0],"560 Roslyn Rescue/590 Roslyn Highlands":[2,1,3,2,2,0,0,0,0,0,0,1],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,1],"580 Syosset":[2,0,0,0,0,0,0,0,0,0,0,1],"600 Bellmore":[3,0,0,0,0,1,0,1,0,0,0,0],"610 East Meadow":[0,0,0,0,0,1,1,1,0,0,0,1],"620 Levittown":[0,0,0,0,0,0,0,0,0,0,0,1],"630 Massapequa":[2,1,0,1,0,0,0,1,2,1,1,1],"640 Merrick":[0,0,0,0,0,0,1,0,1,0,0,0],"650 North Bellmore":[0,0,1,1,0,0,0,0,1,0,0,0],"660 North Massapequa":[0,0,0,0,1,0,1,0,0,0,0,0],"670 North Merrick":[0,0,1,0,0,0,0,0,0,0,0,1],"680 Seaford":[0,0,0,1,0,1,0,0,0,0,0,0],"690 Wantagh":[0,2,0,1,1,0,0,0,0,2,1,0],"700 Elmont":[0,0,1,0,2,1,0,0,0,1,1,0],"710 Franklin Square & Munson":[1,0,1,1,2,1,0,0,0,0,0,1],"720 Hempstead":[1,0,1,0,1,1,0,1,3,1,0,2],"730 Roosevelt":[1,0,0,1,0,0,1,0,0,1,0,1],"740 South Hempstead":[0,0,0,1,0,0,0,0,0,1,0,0],"750 Uniondale":[0,0,2,0,0,1,1,1,0,2,0,2],"760 West Hempstead":[0,0,0,0,0,1,0,0,0,0,0,0],"800 Albertson":[0,0,0,0,0,0,0,0,0,0,0,0],"810 East Williston":[0,0,0,0,0,0,1,0,0,0,0,0],"820 Great Neck Alert":[0,0,0,0,0,0,0,2,0,0,0,0],"830 Great Neck Vigilant":[2,0,0,0,0,1,0,0,0,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,1,0,0,0,0],"850 Port Washington":[0,0,1,0,0,1,0,1,0,1,0,0],"860 Williston Park":[0,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,0,1,0,0,2,2,1,0,0,0],"900 Bethpage":[1,0,0,0,0,2,0,1,2,0,0,0],"910 Carle Place":[0,0,0,0,0,0,0,0,0,0,1,1],"920 Farmingdale":[0,1,1,0,1,1,0,0,0,0,0,0],"930 Hicksville":[3,1,0,0,1,0,0,0,1,1,0,1],"940 Jericho":[0,0,0,0,0,0,0,1,0,0,0,0],"950 Plainview":[3,1,0,0,0,0,0,0,0,0,0,0],"960 Westbury":[0,1,1,3,1,0,1,1,0,1,0,3],"970 South Farmingdale":[0,0,0,0,0,0,0,1,0,0,0,1]},"2021":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,1,1,0,1,0,0,0,0,0,1],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,1,0,1,1,0,1,0,0,1,0],"150 Garden City Park":[2,1,2,0,0,0,0,0,0,0,0,1],"160 Mineola":[1,1,0,0,1,0,0,0,0,0,0,1],"170 New Hyde Park":[1,0,0,0,0,0,0,0,0,0,0,0],"180 South Floral Park":[0,0,0,1,0,0,1,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[0,0,2,1,0,0,0,0,0,0,0,0],"210 Freeport":[2,1,4,2,0,1,1,3,1,0,1,1],"220 Island Park":[0,0,0,0,0,1,0,0,0,0,0,0],"230 Long Beach":[2,0,0,0,2,0,0,0,1,1,0,0],"240 Oceanside":[0,0,0,1,0,0,0,0,0,0,0,1],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,0],"300 Hewlett":[0,0,0,0,0,0,0,0,0,0,0,0],"310 Inwood":[0,0,1,0,0,0,0,0,0,1,0,1],"320 Lawrence-Cedarhurst":[1,1,0,1,0,2,1,1,0,0,0,1],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[1,2,1,0,1,0,1,0,0,0,1,1],"350 Woodmere":[0,0,0,0,0,0,0,0,0,0,1,1],"400 East Rockaway":[0,0,0,0,0,0,0,0,0,0,0,0],"410 Lakeview":[0,0,0,0,0,0,0,0,1,0,3,0],"420 Lynbrook":[0,1,0,0,0,0,0,0,0,0,0,0],"430 Malverne":[0,0,0,0,0,0,0,0,0,1,0,0],"440 Rockville Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"500 Bayville":[0,0,0,0,0,0,0,1,0,0,0,0],"510 East Norwich":[0,0,0,0,0,0,0,0,0,0,0,0],"520 Glen Cove":[0,2,2,1,1,1,0,1,0,0,0,2],"530 Glenwood":[1,0,0,0,0,0,0,0,0,0,0,1],"540 Locust Valley":[1,0,0,0,0,0,0,0,1,0,0,0],"550 Oyster Bay/Atlantic Steamer":[1,0,0,0,0,0,0,1,0,0,0,0],"560 Roslyn Rescue/590 Roslyn Highlands":[0,1,0,0,0,0,0,0,0,0,0,0],"570 Sea Cliff":[1,0,0,0,0,0,0,0,0,0,0,0],"580 Syosset":[0,0,0,1,0,0,1,0,0,1,1,1],"600 Bellmore":[0,0,0,0,0,0,0,0,0,0,0,0],"610 East Meadow":[1,0,2,0,1,1,0,0,1,1,1,0],"620 Levittown":[0,0,1,1,1,0,0,0,0,1,0,1],"630 Massapequa":[1,2,0,0,2,3,1,0,0,1,1,2],"640 Merrick":[0,0,0,0,0,0,0,1,0,0,0,0],"650 North Bellmore":[1,0,0,0,1,0,1,1,0,0,0,1],"660 North Massapequa":[0,0,0,0,0,0,0,0,0,0,0,0],"670 North Merrick":[1,0,0,0,0,1,0,0,0,0,0,0],"680 Seaford":[0,1,0,0,0,0,0,0,1,0,0,0],"690 Wantagh":[1,1,0,0,0,1,2,0,1,0,1,1],"700 Elmont":[0,1,0,1,1,0,1,1,0,2,1,2],"710 Franklin Square & Munson":[2,0,0,0,0,0,0,1,0,1,1,0],"720 Hempstead":[1,2,4,4,1,1,1,4,0,0,1,2],"730 Roosevelt":[0,0,0,1,1,0,0,0,0,0,0,1],"740 South Hempstead":[0,0,0,0,0,0,0,0,0,0,0,0],"750 Uniondale":[0,0,0,0,0,0,0,0,1,0,0,0],"760 West Hempstead":[0,0,0,0,0,0,0,0,0,0,0,0],"800 Albertson":[0,0,0,1,0,0,0,0,0,0,0,0],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[1,0,0,0,0,1,0,1,0,0,0,1],"830 Great Neck Vigilant":[0,0,0,0,0,0,0,0,0,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[0,0,0,0,0,0,0,1,1,1,1,1],"860 Williston Park":[0,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,0,0,0,0,0,0,0,0,0,1],"900 Bethpage":[0,1,0,0,0,0,0,0,0,0,0,0],"910 Carle Place":[0,0,1,0,0,0,0,1,0,0,0,1],"920 Farmingdale":[0,0,0,0,0,0,0,0,0,0,1,0],"930 Hicksville":[0,1,1,1,0,0,3,1,2,0,0,0],"940 Jericho":[1,0,0,0,0,0,0,0,0,0,0,0],"950 Plainview":[0,1,0,0,0,0,1,0,0,1,1,0],"960 Westbury":[2,0,4,1,5,1,0,0,0,0,1,1],"970 South Farmingdale":[0,0,0,0,1,0,1,0,0,0,1,0]},"2022":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,0,1,0,0,0,0,0,0,0,0],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,0,0,2,0,0,2,1,0],"150 Garden City Park":[0,1,0,2,0,0,0,0,1,0,0,0],"160 Mineola":[3,0,0,0,0,0,1,0,0,1,0,1],"170 New Hyde Park":[0,0,0,0,0,0,0,0,0,0,0,0],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[1,0,1,1,0,0,1,1,1,0,0,0],"210 Freeport":[2,1,3,0,2,2,2,2,0,0,0,1],"220 Island Park":[1,0,0,0,0,0,0,0,0,0,1,0],"230 Long Beach":[0,0,0,0,2,0,0,0,0,1,0,1],"240 Oceanside":[1,0,0,0,2,0,0,0,0,1,0,2],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,0],"300 Hewlett":[0,0,1,0,0,0,0,0,0,0,0,0],"310 Inwood":[0,0,0,0,0,0,1,0,0,0,0,0],"320 Lawrence-Cedarhurst":[1,1,0,0,2,0,2,0,0,0,0,0],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[0,0,1,0,0,2,0,1,1,0,0,0],"350 Woodmere":[0,0,0,0,0,1,1,0,0,0,0,1],"400 East Rockaway":[1,0,0,0,0,0,0,0,0,0,0,0],"410 Lakeview":[0,0,0,0,0,0,0,0,0,0,0,0],"420 Lynbrook":[0,0,0,1,0,1,1,0,1,0,0,1],"430 Malverne":[0,0,0,0,0,0,0,0,0,0,0,0],"440 Rockville Centre":[0,1,0,2,0,0,0,0,0,0,0,0],"500 Bayville":[1,0,0,0,0,0,0,0,0,0,1,1],"510 East Norwich":[0,0,0,1,0,0,0,0,0,0,0,0],"520 Glen Cove":[1,0,0,1,1,1,0,0,2,1,0,1],"530 Glenwood":[1,1,1,0,0,0,0,0,0,0,0,0],"540 Locust Valley":[0,0,0,0,0,0,0,0,0,0,0,1],"550 Oyster Bay/Atlantic Steamer":[0,0,0,0,0,0,0,0,2,0,0,0],"560 Roslyn Rescue/590 Roslyn Highlands":[2,0,0,0,2,1,0,0,0,1,1,1],"570 Sea Cliff":[0,0,0,0,1,0,0,0,1,0,0,0],"580 Syosset":[1,0,1,1,0,1,0,0,1,0,1,0],"600 Bellmore":[0,0,0,1,0,0,0,0,0,0,0,0],"610 East Meadow":[1,0,0,1,1,1,0,2,0,0,1,0],"620 Levittown":[0,0,0,0,1,0,1,0,0,0,0,0],"630 Massapequa":[2,0,0,1,1,0,2,0,0,2,2,4],"640 Merrick":[0,0,0,0,0,0,1,0,0,0,0,0],"650 North Bellmore":[0,0,0,0,0,0,0,1,1,0,0,1],"660 North Massapequa":[0,0,0,0,0,0,0,0,0,0,0,0],"670 North Merrick":[0,0,0,1,0,0,0,0,0,0,0,1],"680 Seaford":[0,0,0,1,0,0,0,0,0,0,0,0],"690 Wantagh":[1,0,0,0,0,0,1,0,0,0,0,1],"700 Elmont":[0,2,2,3,3,1,1,2,1,2,1,1],"710 Franklin Square & Munson":[0,0,0,1,0,0,1,2,1,1,0,0],"720 Hempstead":[1,0,0,3,0,1,0,0,1,2,0,1],"730 Roosevelt":[1,2,0,2,0,1,1,0,0,1,2,1],"740 South Hempstead":[1,0,1,0,0,0,0,1,0,0,1,1],"750 Uniondale":[0,0,0,0,0,1,0,0,0,0,1,0],"760 West Hempstead":[0,0,1,0,0,0,0,1,0,0,1,0],"800 Albertson":[0,0,0,0,0,0,0,0,0,0,0,0],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,0,0,0,0,0,1,0,0,1,0],"830 Great Neck Vigilant":[0,0,0,0,0,0,1,0,0,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[0,0,0,0,0,0,0,1,0,0,0,1],"860 Williston Park":[1,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,3,0,0,0,1,0,2,0,0,1],"900 Bethpage":[0,0,1,1,0,0,1,0,0,1,0,1],"910 Carle Place":[0,0,0,1,0,0,0,0,0,0,1,0],"920 Farmingdale":[0,1,0,0,0,1,0,0,0,0,0,0],"930 Hicksville":[0,1,1,2,1,0,1,0,2,0,2,1],"940 Jericho":[2,1,0,0,1,0,0,0,0,0,1,0],"950 Plainview":[1,0,0,0,2,1,1,0,0,1,0,0],"960 Westbury":[1,1,2,1,1,1,3,2,2,1,1,0],"970 South Farmingdale":[0,1,1,0,1,1,0,2,0,0,0,1]},"2023":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,1],"120 Floral Park":[0,0,0,1,0,0,0,0,0,0,0,0],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,2,0,0,0,0,1,0,0,0],"150 Garden City Park":[0,0,1,0,1,0,0,0,0,0,0,1],"160 Mineola":[1,0,1,0,0,0,0,0,0,0,0,0],"170 New Hyde Park":[1,1,0,0,0,0,0,0,0,0,0,1],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[1,1,1,0,0,1,1,1,0,0,1,3],"210 Freeport":[1,1,0,2,2,2,0,0,1,0,3,0],"220 Island Park":[1,1,0,0,0,0,0,0,0,0,0,0],"230 Long Beach":[1,2,1,0,0,1,0,0,0,2,1,1],"240 Oceanside":[0,0,0,0,1,0,0,1,0,1,0,1],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,1],"300 Hewlett":[0,0,0,0,1,0,0,0,1,0,0,0],"310 Inwood":[0,0,1,0,0,0,0,0,0,0,0,1],"320 Lawrence-Cedarhurst":[2,1,0,0,0,1,1,2,1,1,3,0],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[1,0,1,1,1,1,2,0,1,1,2,0],"350 Woodmere":[1,1,0,2,0,0,0,0,0,0,1,0],"400 East Rockaway":[0,0,0,0,0,0,0,0,0,0,0,0],"410 Lakeview":[0,0,0,1,0,0,0,0,1,0,0,0],"420 Lynbrook":[0,0,0,0,0,0,0,0,0,0,0,1],"430 Malverne":[0,0,0,0,0,0,0,0,0,0,0,0],"440 Rockville Centre":[1,0,0,0,0,0,0,1,0,0,0,0],"500 Bayville":[0,0,0,1,0,0,0,1,0,0,0,0],"510 East Norwich":[0,1,0,1,1,0,0,0,0,0,1,0],"520 Glen Cove":[0,0,0,0,0,1,0,2,0,0,0,0],"530 Glenwood":[0,0,0,0,1,0,0,0,0,0,0,0],"540 Locust Valley":[0,0,0,0,0,0,0,1,0,0,0,0],"550 Oyster Bay/Atlantic Steamer":[0,0,0,0,0,0,0,0,0,0,0,0],"560 Roslyn Rescue/590 Roslyn Highlands":[0,1,0,0,1,0,0,0,2,0,0,0],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,1],"580 Syosset":[3,0,0,1,0,1,0,0,1,0,0,2],"600 Bellmore":[0,0,1,1,0,0,1,0,0,0,0,0],"610 East Meadow":[0,0,0,1,0,0,0,0,0,1,0,1],"620 Levittown":[0,0,0,0,0,0,2,0,0,0,0,0],"630 Massapequa":[1,1,1,0,1,0,2,1,2,0,0,0],"640 Merrick":[0,0,0,0,0,0,1,0,0,0,0,0],"650 North Bellmore":[0,0,1,0,0,0,1,0,0,0,0,0],"660 North Massapequa":[0,0,1,0,0,0,0,0,0,0,0,0],"670 North Merrick":[0,1,0,0,0,1,0,0,0,0,0,0],"680 Seaford":[0,0,0,0,0,0,0,0,0,0,0,1],"690 Wantagh":[1,1,0,1,0,1,1,0,0,0,0,2],"700 Elmont":[2,0,0,0,0,3,2,0,0,2,2,0],"710 Franklin Square & Munson":[0,0,0,0,1,0,0,1,0,0,1,0],"720 Hempstead":[2,0,1,2,1,1,0,0,3,2,2,2],"730 Roosevelt":[0,0,0,0,0,0,0,0,0,1,1,1],"740 South Hempstead":[0,0,0,0,0,0,0,0,0,0,0,1],"750 Uniondale":[0,0,0,2,0,0,1,0,0,0,0,0],"760 West Hempstead":[1,0,0,0,0,0,0,0,0,0,0,1],"800 Albertson":[1,0,0,0,0,0,0,0,0,0,1,0],"810 East Williston":[0,0,0,0,1,1,0,0,1,0,0,0],"820 Great Neck Alert":[1,1,0,0,0,0,0,2,0,0,0,0],"830 Great Neck Vigilant":[0,0,1,0,0,0,0,0,0,2,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[0,0,0,0,0,0,0,1,0,2,1,0],"860 Williston Park":[0,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,0,0,0,0,0,0,0,1,1,1],"900 Bethpage":[1,0,0,0,1,1,0,1,0,0,0,0],"910 Carle Place":[0,0,0,0,0,0,0,0,0,0,0,0],"920 Farmingdale":[0,0,0,0,0,0,0,1,0,0,0,0],"930 Hicksville":[1,0,3,2,1,3,0,1,1,0,0,5],"940 Jericho":[0,1,0,0,0,0,0,0,0,0,0,0],"950 Plainview":[0,1,0,0,2,0,0,1,1,1,0,0],"960 Westbury":[0,0,2,1,0,1,0,1,0,1,0,1],"970 South Farmingdale":[0,0,0,0,0,0,0,1,1,0,1,0]},"2024":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,1,0,0,0,0,0,0,0,0,0],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,0,0,1,2,0,0,0,1],"150 Garden City Park":[0,0,0,0,1,0,0,0,0,0,0,0],"160 Mineola":[0,0,0,0,1,1,1,0,0,0,0,0],"170 New Hyde Park":[0,0,0,0,0,0,1,0,0,1,0,1],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,1,0],"190 Stewart Manor":[0,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[1,0,1,0,1,1,1,0,2,2,0,0],"210 Freeport":[0,0,1,2,1,0,0,2,0,2,2,4],"220 Island Park":[0,0,0,0,0,0,1,0,0,0,0,0],"230 Long Beach":[0,1,1,1,1,0,0,1,0,1,1,0],"240 Oceanside":[0,0,0,0,0,1,1,0,1,1,0,0],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,0],"300 Hewlett":[0,0,0,0,0,0,0,1,1,0,0,0],"310 Inwood":[0,0,2,0,0,0,0,0,0,0,1,0],"320 Lawrence-Cedarhurst":[1,0,0,1,0,0,1,2,1,0,0,0],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[2,3,0,0,1,1,1,0,0,0,1,0],"350 Woodmere":[0,0,0,0,1,0,1,0,0,0,1,1],"400 East Rockaway":[0,0,0,0,0,0,1,0,1,0,0,0],"410 Lakeview":[0,0,1,0,0,0,2,0,0,1,0,1],"420 Lynbrook":[0,1,0,1,0,1,0,0,0,0,2,1],"430 Malverne":[0,0,0,0,0,0,0,0,0,0,1,0],"440 Rockville Centre":[1,1,0,0,0,0,0,0,0,0,0,0],"500 Bayville":[0,0,0,0,0,0,0,0,0,0,0,0],"510 East Norwich":[0,0,0,0,0,0,0,0,0,0,0,0],"520 Glen Cove":[3,1,2,1,0,1,1,1,0,1,2,0],"530 Glenwood":[1,0,0,1,1,0,1,0,0,0,0,0],"540 Locust Valley":[1,0,1,0,0,0,0,0,0,1,0,0],"550 Oyster Bay/Atlantic Steamer":[0,0,0,0,1,0,0,1,0,0,1,0],"560 Roslyn Rescue/590 Roslyn Highlands":[0,0,0,1,0,0,2,0,0,0,2,0],"570 Sea Cliff":[0,0,0,0,0,1,0,0,0,0,0,0],"580 Syosset":[0,0,0,0,0,0,0,0,0,0,0,3],"600 Bellmore":[0,0,0,0,0,0,0,0,0,1,0,0],"610 East Meadow":[1,0,0,0,1,0,0,1,0,2,0,0],"620 Levittown":[0,0,0,0,0,0,0,0,0,1,0,0],"630 Massapequa":[1,1,2,0,0,0,1,1,1,0,0,0],"640 Merrick":[0,0,0,0,0,0,0,0,0,0,0,0],"650 North Bellmore":[1,0,0,1,0,2,0,1,0,0,0,1],"660 North Massapequa":[0,0,0,0,0,0,0,0,0,0,0,0],"670 North Merrick":[0,0,0,0,0,0,0,0,0,0,0,0],"680 Seaford":[0,0,0,0,0,1,0,0,0,1,0,0],"690 Wantagh":[0,3,0,1,1,0,1,0,2,0,1,0],"700 Elmont":[0,2,4,2,0,0,3,1,2,0,1,4],"710 Franklin Square & Munson":[0,0,1,0,1,0,0,1,0,1,0,0],"720 Hempstead":[0,0,1,2,0,5,1,0,2,2,0,5],"730 Roosevelt":[0,0,0,0,0,0,0,0,0,0,0,2],"740 South Hempstead":[0,0,0,0,0,0,0,0,0,0,0,0],"750 Uniondale":[0,2,0,1,0,0,1,0,1,0,0,2],"760 West Hempstead":[0,0,0,1,1,0,0,0,0,0,0,0],"800 Albertson":[0,0,0,0,0,0,0,0,0,0,0,0],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,0,0,0,0,1,0,0,1,0,0],"830 Great Neck Vigilant":[1,1,0,0,0,0,0,1,0,1,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[1,0,1,0,1,0,0,0,0,0,0,2],"860 Williston Park":[0,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,0,0,0,1,1,0,0,0,0,0],"900 Bethpage":[0,0,0,0,0,0,0,0,0,0,0,0],"910 Carle Place":[1,0,0,0,0,0,0,0,0,0,0,0],"920 Farmingdale":[0,0,0,1,0,0,0,0,0,0,0,0],"930 Hicksville":[1,1,1,0,0,3,2,1,0,0,4,0],"940 Jericho":[0,0,0,0,0,1,0,2,0,0,2,2],"950 Plainview":[0,1,0,1,1,0,0,0,0,0,0,1],"960 Westbury":[0,0,0,1,0,2,1,0,1,0,2,1],"970 South Farmingdale":[0,0,0,1,0,0,1,0,1,0,1,0]},"2025":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,0,1,0,0,0,0,1,1,0,0],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,0,0,0,0,1,0,0,0],"150 Garden City Park":[0,1,0,0,0,0,0,0,0,0,0,0],"160 Mineola":[0,0,1,1,0,1,0,0,0,0,0,0],"170 New Hyde Park":[0,1,0,0,0,0,0,0,0,0,0,0],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,0,0,1,0,0,0,0,0],"200 Baldwin":[0,0,0,0,0,2,0,2,0,0,2,1],"210 Freeport":[2,0,1,0,2,1,0,1,1,0,0,0],"220 Island Park":[0,0,1,1,0,0,0,0,1,1,0,1],"230 Long Beach":[1,2,2,1,0,0,0,0,2,0,1,3],"240 Oceanside":[1,0,1,0,0,1,0,1,0,1,0,0],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,0],"300 Hewlett":[1,0,0,1,0,0,2,0,0,1,0,0],"310 Inwood":[0,0,0,0,0,0,0,0,0,0,0,0],"320 Lawrence-Cedarhurst":[0,2,0,0,0,0,1,0,0,0,0,1],"330 Meadowmere Park":[0,0,0,1,0,0,0,0,0,0,0,0],"340 Valley Stream":[2,0,2,0,0,1,1,0,1,1,1,0],"350 Woodmere":[0,0,1,0,0,0,0,0,1,0,0,0],"400 East Rockaway":[0,0,0,0,0,0,1,1,0,0,0,0],"410 Lakeview":[0,1,0,0,0,0,0,0,0,1,0,0],"420 Lynbrook":[0,0,0,0,0,0,0,0,0,1,0,1],"430 Malverne":[0,1,0,1,0,0,0,0,1,1,0,2],"440 Rockville Centre":[0,0,0,0,1,1,0,0,0,0,0,1],"500 Bayville":[0,0,0,0,0,0,0,0,0,0,0,0],"510 East Norwich":[0,0,0,0,0,0,0,0,0,0,0,0],"520 Glen Cove":[0,0,0,2,0,0,0,2,1,0,0,1],"530 Glenwood":[1,0,0,0,0,0,0,0,0,1,0,0],"540 Locust Valley":[0,0,0,0,0,0,0,1,0,0,0,0],"550 Oyster Bay/Atlantic Steamer":[0,1,0,0,0,0,0,0,0,0,0,1],"560 Roslyn Rescue/590 Roslyn Highlands":[1,0,1,0,2,2,1,0,1,0,0,0],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,1],"580 Syosset":[0,1,0,1,0,0,1,1,0,1,1,1],"600 Bellmore":[1,0,1,0,0,0,0,1,0,0,0,1],"610 East Meadow":[1,0,0,0,2,0,0,0,2,0,0,1],"620 Levittown":[0,0,0,0,0,2,1,2,0,0,0,1],"630 Massapequa":[2,1,1,1,1,0,1,0,0,1,1,0],"640 Merrick":[0,0,0,0,0,0,0,0,0,0,0,0],"650 North Bellmore":[0,0,0,0,0,1,0,0,0,2,1,0],"660 North Massapequa":[0,1,0,0,0,0,0,0,0,0,1,0],"670 North Merrick":[0,0,0,0,0,0,0,0,0,0,0,0],"680 Seaford":[0,0,0,1,0,0,0,1,0,0,0,0],"690 Wantagh":[0,0,0,0,0,0,0,4,0,1,1,3],"700 Elmont":[3,1,0,1,2,1,1,0,0,0,1,0],"710 Franklin Square & Munson":[0,1,1,0,0,0,0,0,1,0,1,0],"720 Hempstead":[1,2,0,1,0,3,1,1,2,4,0,2],"730 Roosevelt":[0,0,0,0,0,0,0,0,1,0,0,1],"740 South Hempstead":[0,0,0,0,0,1,0,0,0,0,0,0],"750 Uniondale":[1,0,0,0,0,0,1,0,0,1,0,0],"760 West Hempstead":[1,0,0,0,0,0,0,0,0,0,0,1],"800 Albertson":[0,0,0,0,0,0,0,0,0,1,0,0],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,0,0,0,0,0,0,0,0,0,0],"830 Great Neck Vigilant":[0,0,0,1,0,0,0,0,0,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[1,0,1,0,1,0,0,0,0,0,0,2],"860 Williston Park":[0,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,0,0,0,2,1,1,0,0,2,0],"900 Bethpage":[0,0,1,0,1,0,1,0,0,0,0,1],"910 Carle Place":[0,0,0,0,0,0,0,0,0,0,0,0],"920 Farmingdale":[0,1,0,0,0,0,0,0,0,0,0,0],"930 Hicksville":[0,1,0,0,0,0,0,0,1,1,0,0],"940 Jericho":[1,0,0,0,0,0,0,0,0,0,1,1],"950 Plainview":[1,0,1,0,0,0,1,0,0,0,0,1],"960 Westbury":[3,1,1,1,1,0,0,1,1,0,3,2],"970 South Farmingdale":[0,0,0,1,0,0,0,0,0,0,0,0]},"2026":{"100 Bellerose":[0,0,0,0,0,0,0,0,0,0,0,0],"110 Bellerose Terrace":[0,0,0,0,0,0,0,0,0,0,0,0],"120 Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"130 Floral Park Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"140 Garden City":[0,0,0,0,0,0,0,0,0,0,0,0],"150 Garden City Park":[0,0,0,0,0,0,0,0,0,0,0,0],"160 Mineola":[0,0,0,0,0,0,0,0,0,0,0,0],"170 New Hyde Park":[0,0,0,0,0,0,0,0,0,0,0,0],"180 South Floral Park":[0,0,0,0,0,0,0,0,0,0,0,0],"190 Stewart Manor":[0,0,0,0,0,0,0,0,0,0,0,0],"200 Baldwin":[0,0,0,0,0,0,0,0,0,0,0,0],"210 Freeport":[0,0,0,0,0,0,0,0,0,0,0,0],"220 Island Park":[0,0,0,0,0,0,0,0,0,0,0,0],"230 Long Beach":[0,0,0,0,0,0,0,0,0,0,0,0],"240 Oceanside":[0,0,0,0,0,0,0,0,0,0,0,0],"250 Point Lookout-Lido":[0,0,0,0,0,0,0,0,0,0,0,0],"300 Hewlett":[0,0,0,0,0,0,0,0,0,0,0,0],"310 Inwood":[0,0,0,0,0,0,0,0,0,0,0,0],"320 Lawrence-Cedarhurst":[0,0,0,0,0,0,0,0,0,0,0,0],"330 Meadowmere Park":[0,0,0,0,0,0,0,0,0,0,0,0],"340 Valley Stream":[0,0,0,0,0,0,0,0,0,0,0,0],"350 Woodmere":[0,0,0,0,0,0,0,0,0,0,0,0],"400 East Rockaway":[0,0,0,0,0,0,0,0,0,0,0,0],"410 Lakeview":[0,0,0,0,0,0,0,0,0,0,0,0],"420 Lynbrook":[0,0,0,0,0,0,0,0,0,0,0,0],"430 Malverne":[0,0,0,0,0,0,0,0,0,0,0,0],"440 Rockville Centre":[0,0,0,0,0,0,0,0,0,0,0,0],"500 Bayville":[0,0,0,0,0,0,0,0,0,0,0,0],"510 East Norwich":[0,0,0,0,0,0,0,0,0,0,0,0],"520 Glen Cove":[0,0,0,0,0,0,0,0,0,0,0,0],"530 Glenwood":[0,0,0,0,0,0,0,0,0,0,0,0],"540 Locust Valley":[0,0,0,0,0,0,0,0,0,0,0,0],"550 Oyster Bay/Atlantic Steamer":[0,0,0,0,0,0,0,0,0,0,0,0],"560 Roslyn Rescue/590 Roslyn Highlands":[0,0,0,0,0,0,0,0,0,0,0,0],"570 Sea Cliff":[0,0,0,0,0,0,0,0,0,0,0,0],"580 Syosset":[0,0,0,0,0,0,0,0,0,0,0,0],"600 Bellmore":[0,0,0,0,0,0,0,0,0,0,0,0],"610 East Meadow":[0,0,0,0,0,0,0,0,0,0,0,0],"620 Levittown":[0,0,0,0,0,0,0,0,0,0,0,0],"630 Massapequa":[0,0,0,0,0,0,0,0,0,0,0,0],"640 Merrick":[0,0,0,0,0,0,0,0,0,0,0,0],"650 North Bellmore":[0,0,0,0,0,0,0,0,0,0,0,0],"660 North Massapequa":[0,0,0,0,0,0,0,0,0,0,0,0],"670 North Merrick":[0,0,0,0,0,0,0,0,0,0,0,0],"680 Seaford":[0,0,0,0,0,0,0,0,0,0,0,0],"690 Wantagh":[0,0,0,0,0,0,0,0,0,0,0,0],"700 Elmont":[0,0,0,0,0,0,0,0,0,0,0,0],"710 Franklin Square & Munson":[0,0,0,0,0,0,0,0,0,0,0,0],"720 Hempstead":[0,0,0,0,0,0,0,0,0,0,0,0],"730 Roosevelt":[0,0,0,0,0,0,0,0,0,0,0,0],"740 South Hempstead":[0,0,0,0,0,0,0,0,0,0,0,0],"750 Uniondale":[0,0,0,0,0,0,0,0,0,0,0,0],"760 West Hempstead":[0,0,0,0,0,0,0,0,0,0,0,0],"800 Albertson":[0,0,0,0,0,0,0,0,0,0,0,0],"810 East Williston":[0,0,0,0,0,0,0,0,0,0,0,0],"820 Great Neck Alert":[0,0,0,0,0,0,0,0,0,0,0,0],"830 Great Neck Vigilant":[0,0,0,0,0,0,0,0,0,0,0,0],"840 Plandome":[0,0,0,0,0,0,0,0,0,0,0,0],"850 Port Washington":[0,0,0,0,0,0,0,0,0,0,0,0],"860 Williston Park":[0,0,0,0,0,0,0,0,0,0,0,0],"870 Manhasset-Lakeville":[0,0,0,0,0,0,0,0,0,0,0,0],"900 Bethpage":[0,0,0,0,0,0,0,0,0,0,0,0],"910 Carle Place":[0,0,0,0,0,0,0,0,0,0,0,0],"920 Farmingdale":[0,0,0,0,0,0,0,0,0,0,0,0],"930 Hicksville":[0,0,0,0,0,0,0,0,0,0,0,0],"940 Jericho":[0,0,0,0,0,0,0,0,0,0,0,0],"950 Plainview":[0,0,0,0,0,0,0,0,0,0,0,0],"960 Westbury":[0,0,0,0,0,0,0,0,0,0,0,0],"970 South Farmingdale":[0,0,0,0,0,0,0,0,0,0,0,0]}}},"suffolk":{"name":"Suffolk County","departments":[],"years":{"2025":{},"2026":{}}}}};</script>
+
 <script>
-var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-var BC=['#e8500a','#f0900a','#2e75b6','#22c55e','#a855f7','#ec4899','#14b8a6','#f59e0b','#64748b'];
-var CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8a93a8',font:{size:11}}}},scales:{x:{ticks:{color:'#8a93a8',font:{size:11}},grid:{color:'#2a3045'}},y:{ticks:{color:'#8a93a8',font:{size:11}},grid:{color:'#2a3045'}}}};
-var AC={},selBatYr='all',selIPYr=2026,curCounty='nassau',cmpA=2024,cmpB=2025,D=null;
+  var WORKER_URL = "https://sarasota-cad-proxy.yanks126.workers.dev";
 
-function init(data){
-  D=data;
-  document.getElementById('loading').style.display='none';
-  document.getElementById('lu').innerHTML='Last pushed: '+D.metadata.last_updated;
-  initAll();
-}
-
-init(window.__FIRE_DATA__);
-
-function county(){return D.counties[curCounty];}
-function getHYrs(){return D.metadata.years_complete;}
-function getIPYrs(){return D.metadata.years_in_progress;}
-function getDepts(){return county().departments||[];}
-function getBats(){var b={};getDepts().forEach(function(d){if(d.battalion)b[d.battalion]=1;});return Object.keys(b).sort();}
-function getYrData(yr){return(county().years||{})[String(yr)]||{};}
-function getTotal(yr,bat,dept){
-  var yd=getYrData(yr);
-  return Object.keys(yd).reduce(function(a,k){
-    var di=getDepts().find(function(d){return d.name===k;});
-    if(bat&&(!di||di.battalion!==bat))return a;
-    if(dept&&k!==dept)return a;
-    return a+yd[k].reduce(function(x,n){return x+n;},0);
-  },0);
-}
-function getMonthly(yr,bat){
-  var yd=getYrData(yr),res=new Array(12).fill(0);
-  Object.keys(yd).forEach(function(k){
-    var di=getDepts().find(function(d){return d.name===k;});
-    if(bat&&(!di||di.battalion!==bat))return;
-    yd[k].forEach(function(x,i){res[i]+=x;});
-  });
-  return res;
-}
-function histAvg(){
-  var yrs=getHYrs();
-  return MO.map(function(_,m){return Math.round(yrs.reduce(function(a,y){return a+getMonthly(y)[m];},0)/yrs.length*10)/10;});
-}
-function lastDataMonth(yr){var m=getMonthly(yr);for(var i=11;i>=0;i--)if(m[i]>0)return i;return -1;}
-function mkChart(id,cfg){
-  if(AC[id])AC[id].destroy();
-  var c=document.getElementById(id);if(!c)return;
-  AC[id]=new Chart(c,cfg);
-}
-function hc(v,mx){if(!v)return'';var p=v/mx;return p<.25?'h1':p<.5?'h2':p<.75?'h3':'h4';}
-function trendArrow(yr){
-  var e=yr.slice(0,3).reduce(function(a,b){return a+b;},0)/3,l=yr.slice(-3).reduce(function(a,b){return a+b;},0)/3;
-  return l>e+0.5?'<span class="arr-up">▲</span>':l<e-0.5?'<span class="arr-dn">▼</span>':'<span class="arr-eq">—</span>';
-}
-
-function showTab(name,btn){
-  if(name==='update'){
-    var code=prompt('Passcode:');
-    if(code===null)return;
-    if(code!=='3165'){alert('Incorrect.');return;}
+  function tick() {
+    document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false});
   }
-  document.querySelectorAll('.tab').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('nav button').forEach(function(b){b.classList.remove('active');});
-  document.getElementById('tab-'+name).classList.add('active');
-  if(btn)btn.classList.add('active');
-  if(name==='records')buildRecords();
-  if(name==='compare')buildCompare();
-}
+  setInterval(tick, 1000); tick();
 
-function switchCounty(county,btn){
-  if(county==='suffolk'){
-    document.getElementById('btn-nassau').classList.remove('active');
-    document.getElementById('btn-suffolk').classList.add('active');
-    curCounty='suffolk';
-    document.querySelectorAll('.tab').forEach(function(p){p.classList.remove('active');});
-    document.querySelectorAll('nav button').forEach(function(b){b.classList.remove('active');});
-    document.getElementById('tab-overview').classList.add('active');
-    document.querySelectorAll('nav button')[0].classList.add('active');
-    var ov=document.getElementById('tab-overview');
-    ov.innerHTML='<div class="suffolk-ph"><div class="ic">🚒</div><h2>Suffolk County</h2><p>Suffolk County data coming soon.</p><div class="badge">Coming Soon</div></div>';
-    Object.keys(AC).forEach(function(k){if(AC[k])AC[k].destroy();delete AC[k];});
-    return;
+  // Map centered on Sarasota County
+  var SC_LAT = 27.10, SC_LNG = -82.25;
+  var map = L.map("map", {center:[SC_LAT, SC_LNG], zoom:10, zoomControl:true, attributionControl:false});
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18}).addTo(map);
+
+  function makeIcon(bg, glow, emoji) {
+    var html = [
+      '<div style="',
+        'width:34px;height:34px;',
+        'background:', bg, ';',
+        'border:2px solid ', glow, ';',
+        'border-radius:50%;',
+        'display:flex;align-items:center;justify-content:center;',
+        'box-shadow:0 0 10px ', glow, ';',
+        'font-size:16px;line-height:1;',
+      '">',
+      emoji,
+      '</div>'
+    ].join('');
+    return L.divIcon({
+      className: "",
+      html: html,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -20]
+    });
   }
-  curCounty='nassau';
-  document.getElementById('btn-nassau').classList.add('active');
-  document.getElementById('btn-suffolk').classList.remove('active');
-  var ov=document.getElementById('tab-overview');
-  if(ov.querySelector('.suffolk-ph')){
-    ov.innerHTML='<div id="sc-overview" class="sg"></div><div class="cg t"><div class="cc"><div class="ct"><span class="d"></span>Annual Totals</div><div class="ch-wrap"><canvas id="ch-annual"></canvas></div></div><div class="cc"><div class="ct"><span class="d" style="background:var(--blue)"></span>Battalion Share</div><div class="ch-wrap"><canvas id="ch-pie"></canvas></div></div></div><div class="cg"><div class="cc"><div class="ct"><span class="d" style="background:var(--yellow)"></span>Average Monthly Pattern</div><div class="ch-wrap"><canvas id="ch-mavg"></canvas></div></div><div class="cc"><div class="ct"><span class="d" style="background:var(--green)"></span>Stacked by Battalion</div><div class="ch-wrap"><canvas id="ch-stack"></canvas></div></div></div>';
+
+  var ICONS = {
+    fire_today:    makeIcon("rgba(255,80,0,0.9)",   "rgba(255,100,0,0.8)",  "\uD83D\uDD25"),
+    traffic_today: makeIcon("rgba(0,160,255,0.9)",  "rgba(0,200,255,0.8)",  "\uD83D\uDE97"),
+    alarm_today:   makeIcon("rgba(255,180,0,0.9)",  "rgba(255,200,0,0.8)",  "\u26A0"),
+    marine_today:  makeIcon("rgba(0,140,220,0.9)",  "rgba(0,180,255,0.8)",  "\u26F5"),
+    other_today:   makeIcon("rgba(60,120,180,0.9)", "rgba(80,150,220,0.8)", "\u26A1"),
+    fire_older:    makeIcon("rgba(80,40,0,0.6)",    "rgba(120,60,0,0.4)",   "\uD83D\uDD25"),
+    traffic_older: makeIcon("rgba(0,60,100,0.6)",   "rgba(0,100,150,0.4)",  "\uD83D\uDE97"),
+    alarm_older:   makeIcon("rgba(80,60,0,0.6)",    "rgba(120,100,0,0.4)",  "\u26A0"),
+    marine_older:  makeIcon("rgba(0,50,90,0.6)",    "rgba(0,80,140,0.4)",   "\u26F5"),
+    other_older:   makeIcon("rgba(20,40,60,0.6)",   "rgba(40,70,100,0.4)",  "\u26A1"),
+  };
+
+  var mapMarkers = [];
+  var allIncidents = [];
+  var currentFilter = "all";
+  var currentAgency = "all";
+  var geocodeCache = {};
+  var idCounter = 0;
+
+  // Determine agency from case number prefix
+  function getAgency(caseNum) {
+    if (!caseNum) return "other";
+    var c = caseNum.toUpperCase();
+    if (c.indexOf("NPFD") === 0) return "npfd";
+    if (c.indexOf("SCFD") === 0) return "scfd";
+    if (c.indexOf("VFD")  === 0) return "vfd";
+    if (c.indexOf("EFD")  === 0) return "efd";
+    if (c.indexOf("NVFD") === 0) return "nvfd";
+    if (c.indexOf("LBFD") === 0) return "lbfd";
+    return "other";
   }
-  initAll();
-}
 
-function initAll(){
-  ['dept-bat','ip-bat','heat-bat'].forEach(function(id){var el=document.getElementById(id);if(!el)return;while(el.options.length>1)el.remove(1);});
-  selBatYr='all';
-  buildOverview();buildTrends();buildBatUI();buildHeatmap();buildDeptUI();buildIPUI();buildUpdateUI();
-}
+  function getAgencyLabel(agency) {
+    var labels = {npfd:"N.PORT", scfd:"SCFD", vfd:"VENICE", efd:"ENGLEWOOD", nvfd:"NOKOMIS", lbfd:"LBKEY", other:"OTHER"};
+    return labels[agency] || "OTHER";
+  }
 
-function buildOverview(){
-  var yrs=getHYrs(),tots=yrs.map(function(y){return getTotal(y);});
-  var all=tots.reduce(function(a,b){return a+b;},0);
-  var last=tots[tots.length-1],prev=tots[tots.length-2],delta=last-prev;
-  var pct=Math.round(Math.abs(delta)/prev*100);
-  var bats=getBats(),peak=yrs[tots.indexOf(Math.max.apply(null,tots))];
-  var topDN='',topDM=0;
-  getDepts().forEach(function(d){
-    var t=yrs.reduce(function(a,y){return a+getTotal(y,null,d.name);},0);
-    if(t>topDM){topDM=t;topDN=d.name.split(' ').slice(1).join(' ');}
-  });
-  var topBN='',topBM=0;
-  bats.forEach(function(b){
-    var t=yrs.reduce(function(a,y){return a+getTotal(y,b);},0);
-    if(t>topBM){topBM=t;topBN=b.replace('Battalion ','Bn ');}
-  });
-  var cn=(county().name||'').replace(' County','');
-  var cards=[
-    {l:cn+' All-Time Total',v:all.toLocaleString(),s:yrs[0]+'–'+yrs[yrs.length-1],c:''},
-    {l:yrs[yrs.length-1]+' Total',v:last,s:yrs[yrs.length-2]+': '+prev,delta:delta,pct:pct,c:'bl'},
-    {l:'Annual Average',v:Math.round(all/yrs.length),s:'fires per year',c:'ye'},
-    {l:'Most Active Dept',v:topDN,s:topDM+' fires all-time',c:''},
-    {l:'Most Active Battalion',v:topBN,s:'by all-time total',c:'gr'},
-    {l:'Peak Year',v:peak,s:Math.max.apply(null,tots)+' fires',c:''},
-  ];
-  var sc=document.getElementById('sc-overview');if(!sc)return;
-  sc.innerHTML=cards.map(function(c){
-    return '<div class="sc '+c.c+'"><div class="sl">'+c.l+'</div><div class="sv">'+c.v+'</div><div class="ss">'+c.s+'</div>'+(c.delta!==undefined?'<div class="sd '+(c.delta>=0?'dn':'up')+'">'+(c.delta>=0?'▲':'▼')+' '+Math.abs(c.delta)+' ('+c.pct+'%) vs prior year</div>':'')+'</div>';
-  }).join('');
-  var roll=tots.map(function(_,i){var s=tots.slice(Math.max(0,i-2),i+1);return Math.round(s.reduce(function(a,b){return a+b;},0)/s.length);});
-  var rollLabel='Rolling Avg (up to 3-Yr)';
-  mkChart('ch-annual',{type:'bar',data:{labels:yrs,datasets:[
-    {label:'Annual Total',data:tots,backgroundColor:tots.map(function(t){return t===Math.max.apply(null,tots)?'#e8500a':'#2e75b633';}),borderColor:'#2e75b6',borderWidth:1.5,order:2},
-    {label:rollLabel,data:roll,type:'line',borderColor:'#f59e0b',borderWidth:2,pointRadius:3,fill:false,tension:.4,order:1}
-  ]},options:CD});
-  var bt=bats.map(function(b){return yrs.reduce(function(a,y){return a+getTotal(y,b);},0);});
-  mkChart('ch-pie',{type:'doughnut',data:{labels:bats.map(function(b){return b.replace('Battalion ','Bn ');}),datasets:[{data:bt,backgroundColor:BC,borderColor:'#0d0f14',borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8a93a8',font:{size:10},padding:8}}}}});
-  var ha=histAvg();
-  mkChart('ch-mavg',{type:'bar',data:{labels:MO,datasets:[{label:'Avg',data:ha,backgroundColor:ha.map(function(v){return v===Math.max.apply(null,ha)?'#e8500a':'#2e75b655';}),borderColor:'#2e75b6',borderWidth:1}]},options:CD});
-  mkChart('ch-stack',{type:'bar',data:{labels:yrs,datasets:bats.map(function(b,i){return{label:b.replace('Battalion ','Bn '),data:yrs.map(function(y){return getTotal(y,b);}),backgroundColor:BC[i]+'cc',borderColor:BC[i],borderWidth:.5};})},
-    options:Object.assign({},CD,{scales:Object.assign({},CD.scales,{x:Object.assign({},CD.scales.x,{stacked:true}),y:Object.assign({},CD.scales.y,{stacked:true})})})});
-}
+  function category(t) {
+    if (!t) return "other";
+    t = t.toUpperCase();
+    // Traffic must be checked FIRST so crash/collision incidents are not caught by injury patterns
+    if (/TRAFFIC|CRASH|COLLISION|ACCIDENT|MVC/.test(t)) return "traffic";
+    if (/ALARM|CARBON|MONOXIDE/.test(t)) return "alarm";
+    if (/FIRE|BRUSH|EXPLOSION|STRUCTURE|SMOKE|HAZMAT|BURNING|OUTSIDE FIRE|ELECTRICAL/.test(t)) return "fire";
+    if (/MARINE|WATER|BOAT|DROWNING|FLOOD|SWIFT WATER|SURF|DIVE|VESSEL/.test(t)) return "marine";
+    return "other";
+  }
 
-function buildTrends(){
-  var yrs=getHYrs(),tots=yrs.map(function(y){return getTotal(y);});
-  var roll=tots.map(function(_,i){var s=tots.slice(Math.max(0,i-2),i+1);return Math.round(s.reduce(function(a,b){return a+b;},0)/s.length);});
-  mkChart('ch-trend',{type:'line',data:{labels:yrs,datasets:[
-    {label:'Annual Total',data:tots,borderColor:'#e8500a',backgroundColor:'rgba(232,80,10,.1)',borderWidth:2,fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#e8500a'},
-    {label:'Rolling Avg (up to 3-Yr)',data:roll,borderColor:'#f59e0b',borderWidth:2,borderDash:[5,4],fill:false,tension:.4,pointRadius:0}
-  ]},options:CD});
-  var yoy=yrs.slice(1).map(function(y,i){return getTotal(y)-getTotal(yrs[i]);});
-  mkChart('ch-yoy',{type:'bar',data:{labels:yrs.slice(1),datasets:[{label:'YoY',data:yoy,backgroundColor:yoy.map(function(v){return v>=0?'#ef444488':'#22c55e88';}),borderColor:yoy.map(function(v){return v>=0?'#ef4444':'#22c55e';}),borderWidth:1.5}]},
-    options:Object.assign({},CD,{plugins:Object.assign({},CD.plugins,{legend:{display:false}})})});
-  var bats=getBats();
-  var ea=bats.map(function(b){return Math.round(yrs.slice(0,3).map(function(y){return getTotal(y,b);}).reduce(function(a,x){return a+x;},0)/3);});
-  var la=bats.map(function(b){return Math.round(yrs.slice(-3).map(function(y){return getTotal(y,b);}).reduce(function(a,x){return a+x;},0)/3);});
-  mkChart('ch-btrd',{type:'bar',data:{labels:bats.map(function(b){return b.replace('Battalion ','');}),datasets:[
-    {label:yrs[0]+'–'+yrs[2]+' Avg',data:ea,backgroundColor:'#2e75b666',borderColor:'#2e75b6',borderWidth:1.5},
-    {label:yrs[yrs.length-3]+'–'+yrs[yrs.length-1]+' Avg',data:la,backgroundColor:'#e8500a66',borderColor:'#e8500a',borderWidth:1.5}
-  ]},options:CD});
-  var rows=yrs.map(function(y,i){
-    var t=getTotal(y),pv=i>0?getTotal(yrs[i-1]):null,yoyv=pv!==null?t-pv:null,pct=pv?((t-pv)/pv*100).toFixed(1):null;
-    var mo=getMonthly(y),pk=MO[mo.indexOf(Math.max.apply(null,mo))],lw=MO[mo.indexOf(Math.min.apply(null,mo))];
-    var fs=Math.max(0,i-2),rv=Math.round(tots.slice(fs,i+1).reduce(function(a,b){return a+b;},0)/(i-fs+1));
-    var arr=yoyv===null?'':yoyv>0?'<span class="arr-up">▲</span>':yoyv<0?'<span class="arr-dn">▼</span>':'<span class="arr-eq">—</span>';
-    return '<tr><td style="text-align:left;font-weight:700">'+y+'</td><td>'+t+'</td><td>'+arr+' '+(yoyv===null?'—':(yoyv>=0?'+':'')+yoyv)+'</td><td style="color:'+(!pct?'#8a93a8':+pct>=0?'#ef4444':'#22c55e')+'">'+(pct?(+pct>=0?'+':'')+pct+'%':'—')+'</td><td>'+rv+'</td><td style="color:'+((t-rv)>=0?'#ef4444':'#22c55e')+'">'+(t-rv>=0?'+':'')+(t-rv)+'</td><td>'+pk+'</td><td>'+Math.max.apply(null,mo)+'</td><td>'+lw+'</td><td>'+Math.min.apply(null,mo)+'</td></tr>';
-  });
-  document.getElementById('tbl-trend').innerHTML='<thead><tr><th>Year</th><th>Total</th><th>YoY</th><th>%</th><th>Roll Avg</th><th>vs Avg</th><th>Peak Mo</th><th>Peak #</th><th>Low Mo</th><th>Low #</th></tr></thead><tbody>'+rows.join('')+'</tbody>';
-}
+  function hasAddress(location) {
+    if (!location || location.trim().length < 4) return false;
+    var l = location.trim().toUpperCase();
+    if (/^(GRID|REDACTED|UNKNOWN|N\/A|NONE)$/.test(l)) return false;
+    // Exact street number at start (e.g. 9450 PIPER RD)
+    if (/^\d+\s+\w/.test(l)) return true;
+    // Intersection (contains /)
+    if (l.indexOf("/") !== -1) return true;
+    return false;
+  }
 
-function buildBatUI(){
-  var yrs=getHYrs();
-  document.getElementById('bat-pills').innerHTML='<span class="active" onclick="selBatYear(\'all\',this)">All Years</span>'+yrs.map(function(y){return '<span onclick="selBatYear('+y+',this)">'+y+'</span>';}).join('');
-  getBats().forEach(function(b){var d=document.getElementById('dept-bat'),ip=document.getElementById('ip-bat');if(d)d.add(new Option(b,b));if(ip)ip.add(new Option(b,b));});
-  renderBatCharts();renderBatTable();
-}
-function selBatYear(yr,el){
-  selBatYr=yr;
-  document.querySelectorAll('#bat-pills span').forEach(function(p){p.classList.remove('active');});
-  el.classList.add('active');
-  document.getElementById('bat-yr-lbl').textContent=yr==='all'?'All Years':yr;
-  renderBatCharts();renderBatTable();
-}
-function renderBatCharts(){
-  var bats=getBats(),yrs=selBatYr==='all'?getHYrs():[selBatYr];
-  var bt=bats.map(function(b){return yrs.reduce(function(a,y){return a+getTotal(y,b);},0);});
-  mkChart('ch-batbar',{type:'bar',data:{labels:bats.map(function(b){return b.replace('Battalion ','');}),datasets:[{label:'Fires',data:bt,backgroundColor:BC.map(function(c){return c+'cc';}),borderColor:BC,borderWidth:1.5}]},options:Object.assign({},CD,{plugins:Object.assign({},CD.plugins,{legend:{display:false}})})});
-  mkChart('ch-batmo',{type:'line',data:{labels:MO,datasets:bats.map(function(b,i){return{label:b.replace('Battalion ','Bn '),data:MO.map(function(_,m){return yrs.reduce(function(a,y){return a+getMonthly(y,b)[m];},0);}),borderColor:BC[i],backgroundColor:BC[i]+'33',borderWidth:1.5,pointRadius:2,fill:false,tension:.3};})},options:CD});
-}
-function renderBatTable(){
-  var bats=getBats(),yrs=selBatYr==='all'?getHYrs():[selBatYr];
-  var ct=bats.reduce(function(a,b){return a+yrs.reduce(function(x,y){return x+getTotal(y,b);},0);},0);
-  var rows=bats.map(function(b,i){var yr=yrs.map(function(y){return getTotal(y,b);}),tot=yr.reduce(function(a,x){return a+x;},0);return '<tr><td style="text-align:left;font-weight:700;color:'+BC[i]+'">'+b+'</td>'+yr.map(function(v){return '<td class="fc">'+(v||'')+'</td>';}).join('')+'<td style="font-weight:700">'+tot+'</td><td>'+(tot/yrs.length).toFixed(1)+'</td><td>'+(ct?(tot/ct*100).toFixed(1):0)+'%</td></tr>';});
-  var cr='<tr style="background:rgba(232,80,10,.1);font-weight:700"><td style="text-align:left;color:var(--accent)">TOTAL</td>'+yrs.map(function(y){return '<td style="color:var(--accent)">'+bats.reduce(function(a,b){return a+getTotal(y,b);},0)+'</td>';}).join('')+'<td style="color:var(--accent)">'+ct+'</td><td style="color:var(--accent)">'+(ct/yrs.length).toFixed(1)+'</td><td>100%</td></tr>';
-  document.getElementById('tbl-bat').innerHTML='<thead><tr><th style="text-align:left">Battalion</th>'+yrs.map(function(y){return '<th>'+y+'</th>';}).join('')+'<th>Total</th><th>Avg/Yr</th><th>%</th></tr></thead><tbody>'+rows.join('')+cr+'</tbody>';
-}
+  var CAT_EMOJI = {fire:"\uD83D\uDD25", marine:"\u26F5", traffic:"\uD83D\uDE97", alarm:"\u26A0", other:"\u26A1"};
+  var CAT_CLS   = {fire:"icon-fire", marine:"icon-marine", traffic:"icon-traffic", alarm:"icon-alarm", other:"icon-other"};
 
-function buildHeatmap(){
-  var yrs=getHYrs(),allv=[];
-  yrs.forEach(function(y){MO.forEach(function(_,m){allv.push(getMonthly(y)[m]);});});
-  var mx=Math.max.apply(null,allv),curMo=new Date().getMonth();
-  var rows=yrs.map(function(y){var mo=getMonthly(y),tot=mo.reduce(function(a,b){return a+b;},0);return '<tr><td style="text-align:left;font-weight:700;cursor:pointer" onclick="this.closest(\'tr\').classList.toggle(\'br\')">'+y+'</td>'+mo.map(function(v,mi){return '<td class="fc '+hc(v,mx)+'" style="'+(mi===curMo?'outline:2px solid var(--yellow);outline-offset:-2px;':'')+'">'+(v||'')+'</td>';}).join('')+'<td style="font-weight:700">'+tot+'</td></tr>';});
-  var ar='<tr style="background:rgba(232,80,10,.15)"><td style="text-align:left;font-weight:700;color:var(--accent)">Avg</td>'+MO.map(function(_,m){var a=Math.round(yrs.reduce(function(x,y){return x+getMonthly(y)[m];},0)/yrs.length*10)/10;return '<td class="fc '+hc(a,mx)+'" style="color:var(--accent)">'+a+'</td>';}).join('')+'<td style="font-weight:700;color:var(--accent)">'+Math.round(yrs.reduce(function(a,y){return a+getTotal(y);},0)/yrs.length)+'</td></tr>';
-  document.getElementById('tbl-heat').innerHTML='<thead><tr><th style="text-align:left">Year</th>'+MO.map(function(m,i){return '<th style="'+(i===curMo?'color:var(--yellow)':'')+'">'+m+'</th>';}).join('')+'<th>Total</th></tr></thead><tbody>'+rows.join('')+ar+'</tbody>';
-  var hs=document.getElementById('heat-bat');getBats().forEach(function(b){hs.add(new Option(b,b));});
-  renderBatHeat();
-}
-function renderBatHeat(){
-  var bat=document.getElementById('heat-bat').value,yrs=getHYrs(),allv=[];
-  yrs.forEach(function(y){MO.forEach(function(_,m){allv.push(getMonthly(y,bat)[m]);});});
-  var mx=Math.max.apply(null,allv)||1;
-  var rows=yrs.map(function(y){var mo=getMonthly(y,bat),tot=mo.reduce(function(a,b){return a+b;},0);return '<tr><td style="text-align:left;font-weight:700">'+y+'</td>'+mo.map(function(v){return '<td class="fc '+hc(v,mx)+'">'+(v||'')+'</td>';}).join('')+'<td style="font-weight:700">'+tot+'</td></tr>';});
-  document.getElementById('tbl-batheat').innerHTML='<thead><tr><th style="text-align:left">Year</th>'+MO.map(function(m){return '<th>'+m+'</th>';}).join('')+'<th>Total</th></tr></thead><tbody>'+rows.join('')+'</tbody>';
-}
+  function getTodayStr() {
+    var d = new Date();
+    var mm = String(d.getMonth()+1).padStart(2,"0");
+    var dd = String(d.getDate()).padStart(2,"0");
+    var yy = String(d.getFullYear()).slice(-2);
+    return mm + "/" + dd + "/" + yy;
+  }
 
-function buildDeptUI(){renderDepts();}
-function renderDepts(){
-  var yrs=getHYrs(),bf=document.getElementById('dept-bat').value,so=document.getElementById('dept-sort').value,se=document.getElementById('dept-search').value.toLowerCase();
-  var depts=getDepts().filter(function(d){return(!bf||bf==='all'||d.battalion===bf)&&(!se||d.name.toLowerCase().indexOf(se)>=0);});
-  var wd=depts.map(function(d){var yr=yrs.map(function(y){return getTotal(y,null,d.name);});var tot=yr.reduce(function(a,b){return a+b;},0);return{name:d.name,battalion:d.battalion,yr:yr,tot:tot,avg:tot/yrs.length,peak:yrs[yr.indexOf(Math.max.apply(null,yr))],zeros:yr.filter(function(v){return v===0;}).length};});
-  if(so==='total')wd.sort(function(a,b){return b.tot-a.tot;});else if(so==='avg')wd.sort(function(a,b){return b.avg-a.avg;});else if(so==='name')wd.sort(function(a,b){return a.name.localeCompare(b.name);});else wd.sort(function(a,b){return b.yr[b.yr.length-1]-a.yr[a.yr.length-1];});
-  var mx=Math.max.apply(null,wd.map(function(d){return d.tot;}));
-  var rows=wd.map(function(d,i){
-    var bar='<div style="display:inline-block;width:'+Math.round(d.tot/mx*50)+'px;height:4px;background:var(--accent);border-radius:2px;vertical-align:middle;margin-left:5px"></div>';
-    return '<tr><td style="text-align:left;color:var(--text2)">'+(i+1)+'</td><td style="text-align:left" class="dept-name">'+d.name+bar+'</td><td style="text-align:left;color:var(--text2)">'+d.battalion.replace('Battalion ','Bn ')+'</td>'+d.yr.map(function(v){return '<td class="'+(v?'fc':'zr')+'">'+(v||'')+'</td>';}).join('')+'<td style="font-weight:700">'+d.tot+'</td><td>'+d.avg.toFixed(1)+'</td><td>'+trendArrow(d.yr)+'</td><td style="color:var(--yellow)">'+d.peak+'</td><td style="color:var(--text2)">'+d.zeros+'</td></tr>';
-  });
-  document.getElementById('tbl-dept').innerHTML='<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Department</th><th style="text-align:left">Bat.</th>'+yrs.map(function(y){return '<th>'+y+'</th>';}).join('')+'<th>Total</th><th>Avg</th><th>Trend</th><th>Best Yr</th><th>Zero Yrs</th></tr></thead><tbody>'+rows.join('')+'</tbody>';
-}
+  function setStatus(msg, cls) {
+    var el = document.getElementById("status-bar");
+    el.className = cls || "";
+    el.textContent = msg;
+  }
 
-function buildIPUI(){
-  var ipYrs=getIPYrs();
-  document.getElementById('ip-pills').innerHTML=ipYrs.map(function(y,i){var lm=lastDataMonth(y),has=lm>=0;return '<span class="ip'+(i===0?' active':'')+'" onclick="selIPYear('+y+',this)">'+(has?'<span class="ld"></span>':'')+y+(has?' <small style="opacity:.7">thru '+MO[lm]+'</small>':'<small style="opacity:.7"> (no data)</small>')+'</span>';}).join('');
-  renderIPTab(ipYrs[0]);
-}
-function selIPYear(yr,el){selIPYr=yr;document.querySelectorAll('#ip-pills span').forEach(function(p){p.classList.remove('active');});el.classList.add('active');document.getElementById('ip-yr-lbl').textContent=yr;renderIPTab(yr);}
-function renderIPTab(yr){
-  var actual=getMonthly(yr),ha=histAvg(),hyrs=getHYrs(),hTots=hyrs.map(function(y){return getTotal(y);});
-  var last=lastDataMonth(yr),proj=actual.slice();
-  for(var i=last+1;i<12;i++)proj[i]=Math.round(ha[i]*10)/10;
-  var actTot=actual.reduce(function(a,b){return a+b;},0),projTot=Math.round(proj.reduce(function(a,b){return a+b;},0));
-  var pct=last>=0?Math.round((last+1)/12*100):0,haDate=Math.round(ha.slice(0,last+1).reduce(function(a,b){return a+b;},0));
-  var diff=actTot-haDate;
-  var cards=[{l:'Fires to Date',v:actTot,s:last>=0?'Through '+MO[last]:'No data yet',c:''},{l:'Projected Full Year',v:projTot,s:'Based on 2016–2025 avg',c:'bl'},{l:'Year Progress',v:pct+'%',s:(last+1)+' of 12 months',c:'ye'},{l:'vs Historical Avg',v:(diff>=0?'+':'')+diff,s:'Hist avg to date: '+haDate,c:diff>=0?'gr':''}];
-  document.getElementById('sc-ip').innerHTML=cards.map(function(c){return '<div class="sc '+c.c+'"><div class="sl">'+c.l+'</div><div class="sv">'+c.v+'</div><div class="ss">'+c.s+'</div></div>';}).join('');
-  var actD=MO.map(function(_,i){return i<=last?actual[i]:null;}),prjD=MO.map(function(_,i){return i>last?proj[i]:null;});
-  mkChart('ch-ip-mo',{type:'bar',data:{labels:MO,datasets:[{label:yr+' Actual',data:actD,backgroundColor:'#e8500acc',borderColor:'#e8500a',borderWidth:1},{label:yr+' Projected',data:prjD,backgroundColor:'#f59e0b44',borderColor:'#f59e0b',borderWidth:1},{label:'Hist Avg',data:ha,type:'line',borderColor:'#2e75b6',borderWidth:1.5,borderDash:[4,3],pointRadius:2,fill:false,tension:.4}]},options:CD});
-  var hMin=MO.map(function(_,m){return Math.min.apply(null,hyrs.map(function(y){return getMonthly(y)[m];}));}),hMax=MO.map(function(_,m){return Math.max.apply(null,hyrs.map(function(y){return getMonthly(y)[m];}));});
-  mkChart('ch-ip-rng',{type:'line',data:{labels:MO,datasets:[{label:'Max',data:hMax,borderColor:'#ef444488',borderWidth:1,fill:false,pointRadius:0,tension:.3},{label:'Avg',data:ha,borderColor:'#2e75b6',borderWidth:2,fill:false,pointRadius:2,tension:.3},{label:'Min',data:hMin,borderColor:'#22c55e88',borderWidth:1,fill:false,pointRadius:0,tension:.3},{label:yr+' Actual',data:actD,borderColor:'#e8500a',borderWidth:2.5,pointRadius:4,fill:false,tension:.2}]},options:CD});
-  var allD=hTots.concat([projTot]),allL=hyrs.map(String).concat([yr+' Proj.']);
-  mkChart('ch-ip-proj',{type:'bar',data:{labels:allL,datasets:[{label:'Total',data:allD,backgroundColor:allL.map(function(l){return l.toString().indexOf('Proj')>=0?'#f59e0b88':'#2e75b633';}),borderColor:allL.map(function(l){return l.toString().indexOf('Proj')>=0?'#f59e0b':'#2e75b6';}),borderWidth:1.5}]},options:Object.assign({},CD,{plugins:Object.assign({},CD.plugins,{legend:{display:false}})})});
-  renderIPTable();
-}
-function renderIPTable(){
-  var yr=selIPYr,bf=document.getElementById('ip-bat').value,hyrs=getHYrs(),last=lastDataMonth(yr);
-  var depts=(bf==='all'?getDepts():getDepts().filter(function(d){return d.battalion===bf;}));
-  var rows=depts.map(function(d){var mo=(getYrData(yr)||{})[d.name]||new Array(12).fill(0),tot=mo.reduce(function(a,b){return a+b;},0),ha=hyrs.reduce(function(a,y){return a+((getYrData(y)||{})[d.name]||[]).reduce(function(x,v){return x+v;},0);},0)/hyrs.length;return{name:d.name,bat:d.battalion,mo:mo,tot:tot,ha:ha.toFixed(1)};}).filter(function(r){return r.tot>0||+r.ha>0.5;}).sort(function(a,b){return b.tot-a.tot;});
-  document.getElementById('tbl-ip').innerHTML='<thead><tr><th style="text-align:left">Department</th><th style="text-align:left">Bat.</th>'+MO.map(function(m){return '<th>'+m+'</th>';}).join('')+'<th>Total</th><th>Hist Avg</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td style="text-align:left;white-space:nowrap">'+r.name+'</td><td style="text-align:left">'+r.bat.replace('Battalion ','Bn ')+'</td>'+r.mo.map(function(v,i){return '<td class="'+(i<=last?(v?'fc':'zr'):'zr')+'">'+(v||'')+'</td>';}).join('')+'<td style="font-weight:700">'+r.tot+'</td><td style="color:var(--text2)">'+r.ha+'</td></tr>';}).join('')+'</tbody>';
-}
+  function parseDispatchHTML(html) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, "text/html");
+    var rows = doc.querySelectorAll("tr");
+    var raw = [];
+    var currentDate = "";
+    var todayStr = getTodayStr();
 
-function buildRecords(){
-  var yrs=getHYrs(),tots=yrs.map(function(y){return getTotal(y);});
-  var peak=yrs[tots.indexOf(Math.max.apply(null,tots))],low=yrs[tots.indexOf(Math.min.apply(null,tots))];
-  var busyMo={v:0,yr:'',mo:''};
-  yrs.forEach(function(y){MO.forEach(function(m,mi){var v=getMonthly(y)[mi];if(v>busyMo.v)busyMo={v:v,yr:y,mo:m};});});
-  var avg=tots.reduce(function(a,b){return a+b;},0)/tots.length;
-  document.getElementById('rec-county').innerHTML=[
-    {l:'Peak Year',v:peak,s:Math.max.apply(null,tots)+' fires',cls:'gold'},
-    {l:'Lowest Year',v:low,s:Math.min.apply(null,tots)+' fires',cls:'blue'},
-    {l:'Busiest Single Month',v:busyMo.mo+' '+busyMo.yr,s:busyMo.v+' fires',cls:'red'},
-    {l:'Annual Average',v:Math.round(avg),s:'fires per year',cls:''},
-    {l:'All-Time Total',v:tots.reduce(function(a,b){return a+b;},0).toLocaleString(),s:yrs[0]+'–'+yrs[yrs.length-1],cls:''},
-    {l:'Avg per Month',v:(tots.reduce(function(a,b){return a+b;},0)/(yrs.length*12)).toFixed(1),s:'across all years',cls:'green'},
-  ].map(function(r){return '<div class="rc '+r.cls+'"><div class="rl">'+r.l+'</div><div class="rv">'+r.v+'</div><div class="rs">'+r.s+'</div></div>';}).join('');
-  var dd=getDepts().map(function(d){var yr=yrs.map(function(y){return getTotal(y,null,d.name);});var tot=yr.reduce(function(a,b){return a+b;},0),best=Math.max.apply(null,yr),bYr=yrs[yr.indexOf(best)],zeros=yr.filter(function(v){return v===0;}).length;return{name:d.name,tot:tot,best:best,bYr:bYr,zeros:zeros,yr:yr};});
-  var topD=dd.slice().sort(function(a,b){return b.tot-a.tot;})[0];
-  var topS=dd.slice().sort(function(a,b){return b.best-a.best;})[0];
-  var mzD=dd.slice().sort(function(a,b){return b.zeros-a.zeros;})[0];
-  var lzD=dd.filter(function(d){return d.tot>0;}).sort(function(a,b){return a.zeros-b.zeros;})[0];
-  document.getElementById('rec-dept').innerHTML=[
-    {l:'Most Fires All-Time',v:topD.name.split(' ').slice(1).join(' '),s:topD.tot+' fires',cls:'gold'},
-    {l:'Best Single Year',v:topS.name.split(' ').slice(1).join(' '),s:topS.best+' in '+topS.bYr,cls:'red'},
-    {l:'Most Zero-Fire Years',v:mzD.name.split(' ').slice(1).join(' '),s:mzD.zeros+' zero-fire years',cls:'blue'},
-    {l:'Most Consistent',v:lzD.name.split(' ').slice(1).join(' '),s:'only '+lzD.zeros+' zero-fire year(s)',cls:'green'},
-  ].map(function(r){return '<div class="rc '+r.cls+'"><div class="rl">'+r.l+'</div><div class="rv">'+r.v+'</div><div class="rs">'+r.s+'</div></div>';}).join('');
-  document.getElementById('rec-monthly').innerHTML=MO.map(function(m,mi){var vals=yrs.map(function(y){return getMonthly(y)[mi];});var pk=Math.max.apply(null,vals),avg=Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length*10)/10;return '<div class="rc"><div class="rl">'+m+'</div><div class="rv">'+pk+'</div><div class="rs">Peak: '+yrs[vals.indexOf(pk)]+' · Avg: '+avg+'</div></div>';}).join('');
-  var zrows=dd.filter(function(d){return d.zeros>0;}).sort(function(a,b){return b.zeros-a.zeros;}).slice(0,20).map(function(d){var zList=yrs.filter(function(y,i){return d.yr[i]===0;}).join(', ');return '<tr><td style="text-align:left;white-space:nowrap">'+d.name+'</td><td>'+d.zeros+'</td><td style="text-align:left;color:var(--text2)">'+zList+'</td></tr>';});
-  document.getElementById('tbl-zeros').innerHTML='<thead><tr><th style="text-align:left">Department</th><th>Zero-Fire Yrs</th><th style="text-align:left">Which Years</th></tr></thead><tbody>'+zrows.join('')+'</tbody>';
-}
+    rows.forEach(function(row) {
+      var fullText = row.textContent.trim();
+      if (fullText.indexOf("Event Date:") !== -1) {
+        var match = fullText.match(/(\d{2}\/\d{2}\/\d{2})/);
+        if (match) currentDate = match[1];
+        return;
+      }
 
-function buildCompare(){
-  var yrs=getHYrs(),sa=document.getElementById('cmp-a'),sb=document.getElementById('cmp-b');
-  while(sa.options.length)sa.remove(0);while(sb.options.length)sb.remove(0);
-  yrs.forEach(function(y){sa.add(new Option(y,y));sb.add(new Option(y,y));});
-  sa.value=yrs[yrs.length-2];sb.value=yrs[yrs.length-1];
-  getBats().forEach(function(b){var el=document.getElementById('cmp-bat-filter');if(el)el.add(new Option(b,b));});
-  cmpA=parseInt(sa.value);cmpB=parseInt(sb.value);
-  runCompare();
-}
-function runCompare(){
-  cmpA=parseInt(document.getElementById('cmp-a').value);cmpB=parseInt(document.getElementById('cmp-b').value);
-  var ta=getTotal(cmpA),tb=getTotal(cmpB),diff=tb-ta;
-  document.getElementById('cmp-stats').innerHTML=[
-    {l:cmpA+' Total',v:ta,s:'fires',c:'bl'},{l:cmpB+' Total',v:tb,s:'fires',c:''},
-    {l:'Difference',v:(diff>=0?'+':'')+diff,s:cmpB+' vs '+cmpA,c:diff>=0?'gr':''},
-    {l:'% Change',v:(diff>=0?'+':'')+((diff/ta)*100).toFixed(1)+'%',s:'year over year',c:'ye'},
-  ].map(function(c){return '<div class="sc '+c.c+'"><div class="sl">'+c.l+'</div><div class="sv">'+c.v+'</div><div class="ss">'+c.s+'</div></div>';}).join('');
-  mkChart('ch-cmp-mo',{type:'bar',data:{labels:MO,datasets:[{label:String(cmpA),data:getMonthly(cmpA),backgroundColor:'#2e75b688',borderColor:'#2e75b6',borderWidth:1.5},{label:String(cmpB),data:getMonthly(cmpB),backgroundColor:'#e8500a88',borderColor:'#e8500a',borderWidth:1.5}]},options:CD});
-  var bats=getBats();
-  mkChart('ch-cmp-bat',{type:'bar',data:{labels:bats.map(function(b){return b.replace('Battalion ','');}),datasets:[{label:String(cmpA),data:bats.map(function(b){return getTotal(cmpA,b);}),backgroundColor:'#2e75b688',borderColor:'#2e75b6',borderWidth:1.5},{label:String(cmpB),data:bats.map(function(b){return getTotal(cmpB,b);}),backgroundColor:'#e8500a88',borderColor:'#e8500a',borderWidth:1.5}]},options:CD});
-  renderCmpTable();
-}
-function renderCmpTable(){
-  var bf=document.getElementById('cmp-bat-filter').value;
-  var depts=bf==='all'?getDepts():getDepts().filter(function(d){return d.battalion===bf;});
-  var rows=depts.map(function(d){var a=getTotal(cmpA,null,d.name),b=getTotal(cmpB,null,d.name),diff=b-a;return{name:d.name,bat:d.battalion,a:a,b:b,diff:diff};}).filter(function(r){return r.a>0||r.b>0;}).sort(function(a,b){return Math.abs(b.diff)-Math.abs(a.diff);});
-  document.getElementById('tbl-cmp').innerHTML='<thead><tr><th style="text-align:left">Department</th><th style="text-align:left">Bat.</th><th>'+cmpA+'</th><th>'+cmpB+'</th><th>Change</th></tr></thead><tbody>'+rows.map(function(r){var col=r.diff>0?'var(--red)':r.diff<0?'var(--green)':'var(--text2)';return '<tr><td style="text-align:left;white-space:nowrap">'+r.name+'</td><td style="text-align:left">'+r.bat.replace('Battalion ','Bn ')+'</td><td>'+r.a+'</td><td>'+r.b+'</td><td style="color:'+col+';font-weight:700">'+(r.diff>0?'▲':r.diff<0?'▼':'—')+' '+(r.diff>=0?'+':'')+r.diff+'</td></tr>';}).join('')+'</tbody>';
-}
+      var cells = row.querySelectorAll("td");
+      if (cells.length < 7) return;
 
-function buildUpdateUI(){
-  var ueYr=document.getElementById('ue-yr');while(ueYr.options.length)ueYr.remove(0);
-  getHYrs().concat(getIPYrs()).reverse().forEach(function(y){ueYr.add(new Option(y,y));});
-  var ueD=document.getElementById('ue-dept');while(ueD.options.length)ueD.remove(0);
-  getDepts().forEach(function(d){ueD.add(new Option(d.name,d.name));});
-  ueYr.onchange=updateForm;ueD.onchange=updateForm;updateForm();
-}
-function updateForm(){
-  var yr=document.getElementById('ue-yr').value,dept=document.getElementById('ue-dept').value;
-  var cur=(getYrData(yr)||{})[dept]||new Array(12).fill(0);
-  document.getElementById('ue-cur').textContent='Current: ['+cur.join(', ')+']  total: '+cur.reduce(function(a,b){return a+b;},0);
-  document.getElementById('ue-grid').innerHTML=MO.map(function(m,i){return '<div class="mi"><label>'+m+'</label><input type="number" id="um'+i+'" value="'+cur[i]+'" min="0" max="99"></div>';}).join('');
-}
-function genJSON(){
-  var yr=document.getElementById('ue-yr').value,dept=document.getElementById('ue-dept').value;
-  var vals=MO.map(function(_,i){return parseInt(document.getElementById('um'+i).value)||0;});
-  document.getElementById('ue-out').textContent='"'+dept+'": ['+vals.join(', ')+']';
-  document.getElementById('ue-out').style.display='block';
-}
-function copyJSON(){
-  var out=document.getElementById('ue-out').textContent;if(!out){genJSON();return;}
-  navigator.clipboard.writeText(out).then(function(){var b=event.target;b.textContent='✓ Copied!';setTimeout(function(){b.textContent='Copy';},2000);});
-}
+      var time    = cells[0].textContent.trim() || cells[1].textContent.trim();
+      var event   = cells[2].textContent.trim();
+      var location= cells[3].textContent.trim();
+      var grid    = cells[4].textContent.trim();
+      var zone    = cells[5].textContent.trim();
+      var caseNum = cells[6].textContent.trim();
+
+      if (!event || !caseNum) return;
+
+      raw.push({
+        date: currentDate, time: time, eventType: event,
+        location: location, grid: grid, zone: zone,
+        caseNum: caseNum, agency: getAgency(caseNum),
+        isToday: currentDate === todayStr,
+        mappable: hasAddress(location)
+      });
+    });
+
+    // Deduplicate: same eventType + location + time + date = one incident
+    // Collect all agencies into an array on the first match
+    var merged = [];
+    var seen = {};
+
+    raw.forEach(function(row) {
+      var key = row.date + "|" + row.time + "|" + row.eventType.toUpperCase() + "|" + row.location.toUpperCase();
+      if (seen[key] !== undefined) {
+        // Add agency to existing incident if not already present
+        var existing = merged[seen[key]];
+        if (existing.agencies.indexOf(row.agency) === -1) {
+          existing.agencies.push(row.agency);
+          existing.caseNums.push(row.caseNum);
+        }
+      } else {
+        seen[key] = merged.length;
+        merged.push({
+          date:      row.date,
+          time:      row.time,
+          eventType: row.eventType,
+          location:  row.location,
+          grid:      row.grid,
+          zone:      row.zone,
+          caseNum:   row.caseNum,
+          caseNums:  [row.caseNum],
+          agency:    row.agency,
+          agencies:  [row.agency],
+          isToday:   row.isToday,
+          mappable:  row.mappable,
+          _id:       "inc" + (++idCounter)
+        });
+      }
+    });
+
+    return merged;
+  }
+
+  var GOOGLE_KEY = "AIzaSyBowH_UlTDT0L9cCLoEi34tlChTFA6i2q4";
+
+  var SC_BOUNDS = {
+    minLat: 26.50, maxLat: 27.90,
+    minLng: -82.90, maxLng: -81.60
+  };
+
+  function inRegion(lat, lng) {
+    return lat >= SC_BOUNDS.minLat && lat <= SC_BOUNDS.maxLat &&
+           lng >= SC_BOUNDS.minLng && lng <= SC_BOUNDS.maxLng;
+  }
+
+  function cityFromZone(zone, agencies) {
+    // Build a combined string from zone and all agency names to search
+    var combined = (zone || "") + " " + (agencies ? agencies.join(" ") : "");
+    var z = combined.toUpperCase();
+    if (z.indexOf("NORTH PORT") !== -1 || z.indexOf("NPFD") !== -1) return "North Port";
+    if (z.indexOf("VENICE") !== -1 || z.indexOf("VFD") !== -1)      return "Venice";
+    if (z.indexOf("ENGLEWOOD") !== -1 || z.indexOf("EFD") !== -1)   return "Englewood";
+    if (z.indexOf("NOKOMIS") !== -1 || z.indexOf("NVFD") !== -1)    return "Nokomis";
+    if (z.indexOf("LONGBOAT") !== -1 || z.indexOf("LBFD") !== -1)   return "Longboat Key";
+    if (z.indexOf("OSPREY") !== -1)                                  return "Osprey";
+    return "Sarasota";
+  }
+
+  // I-75 mile marker coordinates — Charlotte, Sarasota, Manatee counties
+  var I75_MM = {
+    // Charlotte County (south end)
+    170:{lat:26.8890,lng:-82.0460}, 171:{lat:26.8990,lng:-82.0520},
+    172:{lat:26.9090,lng:-82.0580}, 173:{lat:26.9190,lng:-82.0640},
+    174:{lat:26.9290,lng:-82.0700}, 175:{lat:26.9380,lng:-82.0760},
+    176:{lat:26.9470,lng:-82.0820}, 177:{lat:26.9560,lng:-82.0870},
+    178:{lat:26.9650,lng:-82.0910},
+    // MM 179 = Exit 179 Toledo Blade Blvd (North Port, Sarasota County)
+    179:{lat:26.9740,lng:-82.0950},
+    180:{lat:26.9830,lng:-82.0980}, 181:{lat:26.9920,lng:-82.1000},
+    182:{lat:27.0010,lng:-82.1020}, 183:{lat:27.0100,lng:-82.1040},
+    184:{lat:27.0190,lng:-82.1055}, 185:{lat:27.0280,lng:-82.1065},
+    186:{lat:27.0370,lng:-82.1070}, 187:{lat:27.0460,lng:-82.1070},
+    188:{lat:27.0550,lng:-82.1068}, 189:{lat:27.0640,lng:-82.1065},
+    190:{lat:27.0730,lng:-82.1060},
+    // MM 191 = Exit 191 River Road
+    191:{lat:27.0820,lng:-82.1055},
+    192:{lat:27.0910,lng:-82.1048}, 193:{lat:27.1000,lng:-82.1040},
+    194:{lat:27.1090,lng:-82.1030}, 195:{lat:27.1180,lng:-82.1018},
+    196:{lat:27.1270,lng:-82.1005}, 197:{lat:27.1360,lng:-82.0990},
+    198:{lat:27.1450,lng:-82.0975}, 199:{lat:27.1540,lng:-82.0960},
+    200:{lat:27.1630,lng:-82.0942}, 201:{lat:27.1720,lng:-82.0922},
+    202:{lat:27.1810,lng:-82.0900}, 203:{lat:27.1900,lng:-82.0878},
+    204:{lat:27.1990,lng:-82.0856},
+    // MM 205 = Exit 205 Clark Road / SR-72
+    205:{lat:27.2080,lng:-82.0833},
+    206:{lat:27.2170,lng:-82.0810}, 207:{lat:27.2260,lng:-82.0786},
+    208:{lat:27.2350,lng:-82.0762}, 209:{lat:27.2440,lng:-82.0738},
+    // MM 210 = Exit 210 Fruitville Road / SR-780
+    210:{lat:27.2530,lng:-82.0713},
+    211:{lat:27.2620,lng:-82.0688}, 212:{lat:27.2710,lng:-82.0663},
+    // MM 213 = Exit 213 University Parkway — Sarasota/Manatee line
+    213:{lat:27.2800,lng:-82.0638},
+    214:{lat:27.2890,lng:-82.0613}, 215:{lat:27.2980,lng:-82.0588}
+  };
+
+  function checkI75MM(address) {
+    var a = address.toUpperCase().trim();
+    // Match: 183000 S I75, 210000 N I75, 195000 I-75, 200000 I75 etc.
+    var m = a.match(/^(\d{3})000\s*[NS]?\s*I[-\s]?75\b/);
+    if (m) {
+      // Return the mile marker number so geocode() can use it
+      return {mmOnly: true, mm: parseInt(m[1])};
+    }
+    return null;
+  }
+
+  async function geocode(address, cityHint) {
+    var cacheKey = address + "|" + (cityHint || "");
+    if (geocodeCache[cacheKey] !== undefined) return geocodeCache[cacheKey];
+
+    // Check I-75 mile marker first
+    var mmCheck = checkI75MM(address);
+    if (mmCheck && mmCheck.mmOnly) {
+      // Send to Google as a milepost query — most accurate method
+      var mmQuery = "I-75 milepost " + mmCheck.mm + " Sarasota County FL";
+      try {
+        var mmUrl = "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+                    encodeURIComponent(mmQuery) +
+                    "&bounds=26.50,-82.90|27.90,-81.60" +
+                    "&key=" + GOOGLE_KEY;
+        var mmr = await fetch(mmUrl);
+        var mmd = await mmr.json();
+        if (mmd.status === "OK" && mmd.results && mmd.results.length > 0) {
+          var mmloc = mmd.results[0].geometry.location;
+          if (inRegion(mmloc.lat, mmloc.lng)) {
+            var mmresult = {lat: mmloc.lat, lng: mmloc.lng};
+            geocodeCache[cacheKey] = mmresult;
+            return mmresult;
+          }
+        }
+      } catch(e) {}
+      // Fallback to table if Google doesn't find it
+      if (I75_MM[mmCheck.mm]) {
+        geocodeCache[cacheKey] = I75_MM[mmCheck.mm];
+        return I75_MM[mmCheck.mm];
+      }
+      geocodeCache[cacheKey] = null;
+      return null;
+    }
+
+    var city = cityHint || "Sarasota";
+    try {
+      var q = address.trim();
+      q = q.replace(/\s*\/\s*/g, " & ");
+      q = q + ", " + city + ", FL";
+
+      var url = "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+                encodeURIComponent(q) +
+                "&bounds=26.50,-82.90|27.90,-81.60" +
+                "&key=" + GOOGLE_KEY;
+      var r = await fetch(url);
+      var data = await r.json();
+      if (data.status === "OK" && data.results && data.results.length > 0) {
+        var loc = data.results[0].geometry.location;
+        if (inRegion(loc.lat, loc.lng)) {
+          var result = {lat: loc.lat, lng: loc.lng};
+          geocodeCache[cacheKey] = result;
+          return result;
+        }
+      }
+    } catch(e) {}
+    geocodeCache[cacheKey] = null;
+    return null;
+  }
+
+  async function renderMap(incidents) {
+    mapMarkers.forEach(function(m) { map.removeLayer(m); });
+    mapMarkers = [];
+
+    var mappable = incidents.filter(function(i) { return i.mappable; });
+    if (!mappable.length) return;
+
+    // Geocode all addresses in parallel using zone as city hint for accuracy
+    await Promise.all(mappable.map(async function(inc) {
+      if (!inc._lat) {
+        var city = cityFromZone(inc.zone || "", inc.agencies || []);
+        var c = await geocode(inc.location, city);
+        if (c) { inc._lat = c.lat; inc._lng = c.lng; }
+      }
+    }));
+
+    var bounds = [];
+    mappable.forEach(function(inc) {
+      if (!inc._lat) return; // skip if geocode failed
+
+      var cat = category(inc.eventType);
+      var suffix = inc.isToday ? "_today" : "_older";
+      var icon = ICONS[cat + suffix] || ICONS["other_today"];
+
+      var marker = L.marker([inc._lat, inc._lng], {icon: icon})
+        .bindPopup(
+          "<div class=\"popup-type\">" + inc.eventType + "</div>" +
+          "<div class=\"popup-addr\">" + inc.location + "</div>" +
+          "<div class=\"popup-time\">" + inc.date + " // " + inc.time + " // " + inc.caseNum + "</div>"
+        )
+        .addTo(map);
+
+      (function(id) {
+        marker._incId = id;
+        marker.on("click", function() {
+          document.querySelectorAll(".inc-card").forEach(function(c) { c.classList.remove("highlighted"); });
+          var card = document.getElementById("card-" + id);
+          if (card) { card.classList.add("highlighted"); card.scrollIntoView({behavior:"smooth", block:"nearest"}); }
+        });
+      })(inc._id);
+
+      mapMarkers.push(marker);
+      bounds.push([inc._lat, inc._lng]);
+    });
+
+    if (bounds.length) {
+      try { map.fitBounds(bounds, {padding:[28,28], maxZoom:14}); }
+      catch(e) { map.setView([SC_LAT, SC_LNG], 10); }
+    }
+  }
+
+  function getFiltered() {
+    var out = allIncidents;
+    // Agency filter — check if any of the incident's agencies match
+    if (currentAgency !== "all") {
+      if (currentAgency === "other") {
+        out = out.filter(function(i) {
+          return i.agencies.some(function(a) { return a === "other" || a === "lbfd"; });
+        });
+      } else {
+        out = out.filter(function(i) {
+          return i.agencies.indexOf(currentAgency) !== -1;
+        });
+      }
+    }
+    // Type filter
+    if (currentFilter === "today")   out = out.filter(function(i) { return i.isToday; });
+    if (currentFilter === "fire")    out = out.filter(function(i) { return category(i.eventType) === "fire"; });
+    if (currentFilter === "marine")  out = out.filter(function(i) { return category(i.eventType) === "marine"; });
+    if (currentFilter === "traffic") out = out.filter(function(i) { return category(i.eventType) === "traffic"; });
+    if (currentFilter === "alarm")   out = out.filter(function(i) { return category(i.eventType) === "alarm"; });
+    return out;
+  }
+
+  function renderList(incidents) {
+    var el = document.getElementById("incident-list");
+    if (!incidents.length) {
+      var msg = currentAgency !== "all"
+        ? "NO " + currentAgency.toUpperCase() + " INCIDENTS IN CURRENT FEED"
+        : "NO INCIDENTS IN FEED";
+      el.innerHTML = "<div class=\"state-screen\"><span style=\"font-size:28px\">&#x1F4E1;</span><span>" + msg + "</span></div>";
+      renderMap([]);
+      return;
+    }
+
+    el.innerHTML = incidents.map(function(inc) {
+      var cat = category(inc.eventType);
+      var ag = inc.agency || "other";
+      var addrHtml = inc.location
+        ? "<div class=\"inc-addr\">&#x25B8; " + inc.location + "</div>"
+        : "";
+
+      // Build all agency tags
+      var agencyTags = (inc.agencies || [ag]).map(function(a) {
+        return "<span class=\"agency-tag " + a + "\">" + getAgencyLabel(a) + "</span>";
+      }).join("");
+
+      return "<div class=\"inc-card " + (inc.isToday ? "is-today" : "is-older") + " agency-" + ag + "\" id=\"card-" + inc._id + "\" onclick=\"focusOnMap('" + inc._id + "')\">" +
+        "<div class=\"inc-icon " + CAT_CLS[cat] + "\">" + CAT_EMOJI[cat] + "</div>" +
+        "<div class=\"inc-body\">" +
+          "<div class=\"inc-type\">" + inc.eventType + "</div>" +
+          addrHtml +
+          "<div class=\"inc-case\">" + agencyTags + "</div>" +
+        "</div>" +
+        "<div class=\"inc-meta\">" +
+          "<div class=\"inc-time\">" + inc.time + "</div>" +
+          "<div class=\"inc-date\">" + inc.date + "</div>" +
+          "<div class=\"status-badge " + (inc.isToday ? "badge-today" : "badge-older") + "\">" + (inc.isToday ? "TODAY" : "PRIOR") + "</div>" +
+        "</div>" +
+      "</div>";
+    }).join("");
+
+    renderMap(incidents);
+  }
+
+  function focusOnMap(id) {
+    var inc = null;
+    for (var i = 0; i < allIncidents.length; i++) {
+      if (allIncidents[i]._id === id) { inc = allIncidents[i]; break; }
+    }
+    if (!inc) return;
+
+    // Highlight the card regardless
+    document.querySelectorAll(".inc-card").forEach(function(c) { c.classList.remove("highlighted"); });
+    var card = document.getElementById("card-" + id);
+    if (card) card.classList.add("highlighted");
+
+    // Pan map if we have coordinates
+    if (inc.mappable && inc._lat) {
+      map.setView([inc._lat, inc._lng], 15, {animate:true});
+      mapMarkers.forEach(function(m) { if (m._incId === id) m.openPopup(); });
+      return;
+    }
+
+    // Coordinates not yet loaded — geocode on demand then pan
+    if (inc.mappable && !inc._lat) {
+      var city = cityFromZone(inc.zone || "", inc.agencies || []);
+      geocode(inc.location, city).then(function(c) {
+        if (!c) return;
+        inc._lat = c.lat;
+        inc._lng = c.lng;
+        map.setView([inc._lat, inc._lng], 15, {animate:true});
+        mapMarkers.forEach(function(m) { if (m._incId === id) m.openPopup(); });
+      });
+    }
+  }
+
+  function updateStats(list) {
+    var today   = list.filter(function(i) { return i.isToday; }).length;
+    var fire    = list.filter(function(i) { return category(i.eventType) === "fire"; }).length;
+    var traffic = list.filter(function(i) { return category(i.eventType) === "traffic"; }).length;
+    document.getElementById("s-today").textContent   = today;
+    document.getElementById("s-fire").textContent    = fire;
+    document.getElementById("s-traffic").textContent = traffic;
+    document.getElementById("s-total").textContent   = list.length;
+  }
+
+  function applyFilters() {
+    var filtered = getFiltered();
+    renderList(filtered);
+  }
+
+  function setAgency(a, btn) {
+    currentAgency = a;
+    document.querySelectorAll(".agency-btn").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    applyFilters();
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+    btn.classList.add("active");
+    applyFilters();
+  }
+
+  async function loadIncidents() {
+    var btn = document.getElementById("refresh-btn");
+    btn.classList.add("spinning");
+    document.getElementById("incident-list").innerHTML =
+      "<div class=\"state-screen\"><div class=\"spinner\"></div><span>ACQUIRING FEED...</span></div>";
+    setStatus("", "");
+
+    try {
+      var res = await fetch(WORKER_URL);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var html = await res.text();
+      var incidents = parseDispatchHTML(html);
+
+      if (!incidents.length) {
+        setStatus("No incidents in current feed", "warn");
+        allIncidents = [];
+        updateStats([]);
+        renderList([]);
+      } else {
+        allIncidents = incidents;
+        updateStats(allIncidents);
+        applyFilters();
+        setStatus("Live -- Sarasota County 911 Dispatch", "good");
+        setTimeout(function() { setStatus("", ""); }, 5000);
+      }
+
+      document.getElementById("last-updated").textContent =
+        "// LAST SYNC: " + new Date().toLocaleTimeString("en-US", {hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false});
+
+    } catch(err) {
+      console.error(err);
+      setStatus("Feed error: " + err.message, "error");
+      document.getElementById("incident-list").innerHTML =
+        "<div class=\"state-screen\"><span style=\"font-size:28px\">&#x26A0;</span><span>FEED OFFLINE -- TAP REFRESH</span></div>";
+    } finally {
+      btn.classList.remove("spinning");
+    }
+  }
+
+  loadIncidents();
+  setInterval(loadIncidents, 60000);
+
+  // Let the layout render then tell Leaflet to fill the column
+  setTimeout(function() { map.invalidateSize(); }, 200);
 </script>
 </body>
 </html>
